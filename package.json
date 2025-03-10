@@ -1,0 +1,24 @@
+{
+  "name": "azure-functions-essentials",
+  "version": "1.0.0",
+  "description": "Essential utilities for Azure Functions",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepare": "npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "jest": "^29.6.1",
+    "ts-jest": "^29.2.6",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.6.1",
+    "zod": "^3.24.2"
+  }
+}
