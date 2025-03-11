@@ -74,19 +74,25 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   protected async executeChain(chainData: TChainData) {
     const { request, context } = chainData;
     for (const [index, link] of this.chainLink.entries()) {
-      let linkResult: ChainLinkResult;
-      switch (link.type) {
-        case 'guard':
-          linkResult = await link.functor(chainData).check(request, context);
-          break;
-        case 'inputBinding':
-          linkResult = await link.functor(chainData).set(context);
-          break;
-      }
+      try {
+        let linkResult: ChainLinkResult;
+        switch (link.type) {
+          case 'guard':
+            linkResult = await link.functor(chainData).check(request, context);
+            break;
+          case 'inputBinding':
+            linkResult = await link.functor(chainData).set(context);
+            break;
+        }
 
-      if (linkResult !== true) {
-        const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
-        context.error(`Link #${index} stopped the chain. Url: ${request.url} | Result: ${JSON.stringify(linkError)}`);
+        if (linkResult !== true) {
+          const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
+          context.error(`Link #${index} stopped the chain. Url: ${request.url} | Result: ${JSON.stringify(linkError)}`);
+          return linkError;
+        }
+      } catch (error) {
+        const linkError = defaultErrors[link.type];
+        context.error(`Link #${index} failed. Url: ${request.url} | Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`);
         return linkError;
       }
     }
