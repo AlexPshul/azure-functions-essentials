@@ -3,13 +3,10 @@ import { InvocationContext } from '@azure/functions';
 
 describe('getInput', () => {
   it('should return the correct context value as T', () => {
-    const context = {
-      extraInputs: new Map<string, unknown>([
-        ['number', 42],
-        ['string', 'hello'],
-        ['object', { key: 'value' }],
-      ]),
-    } as unknown as InvocationContext;
+    const context = new InvocationContext();
+    context.extraInputs.set('number', 42);
+    context.extraInputs.set('string', 'hello');
+    context.extraInputs.set('object', { key: 'value' });
 
     const numberInput = getInput<number>(context, 'number');
     const stringInput = getInput<string>(context, 'string');
@@ -23,12 +20,9 @@ describe('getInput', () => {
 
 describe('getInputItem', () => {
   it('should return the correct item from an array input by index', () => {
-    const context = {
-      extraInputs: new Map([
-        ['numbers', [1, 2, 3]],
-        ['strings', ['a', 'b', 'c']],
-      ]),
-    } as unknown as InvocationContext;
+    const context = new InvocationContext();
+    context.extraInputs.set('numbers', [1, 2, 3]);
+    context.extraInputs.set('strings', ['a', 'b', 'c']);
 
     const firstNumber = getInputItem<number>(context, 'numbers');
     const secondString = getInputItem<string>(context, 'strings', 1);
@@ -38,9 +32,8 @@ describe('getInputItem', () => {
   });
 
   it('should return undefined if the index is out of bounds', () => {
-    const context = {
-      extraInputs: new Map([['numbers', [1, 2, 3]]]),
-    } as unknown as InvocationContext;
+    const context = new InvocationContext();
+    context.extraInputs.set('numbers', [1, 2, 3]);
 
     const outOfBoundsItem = getInputItem<number>(context, 'numbers', 10);
 
@@ -48,9 +41,8 @@ describe('getInputItem', () => {
   });
 
   it('should return undefined if the data is not array', () => {
-    const context = {
-      extraInputs: new Map([['number', 42]]),
-    } as unknown as InvocationContext;
+    const context = new InvocationContext();
+    context.extraInputs.set('number', 42);
 
     const outOfBoundsItem = getInputItem<number>(context, 'number');
 
