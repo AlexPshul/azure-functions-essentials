@@ -5,10 +5,7 @@ import { funcResult } from '../../src/helpers';
 describe('guard', () => {
   // Mock objects for HttpRequest and InvocationContext
   const mockRequest = {} as HttpRequest;
-  const mockContext = {
-    log: jest.fn(),
-    error: jest.fn(),
-  } as unknown as InvocationContext;
+  const mockContext = new InvocationContext();
 
   beforeEach(() => {
     jest.clearAllMocks();
