@@ -1,4 +1,3 @@
-// filepath: d:\repos\azure-functions-eseentials\tests\helpers\get-query.test.ts
 import { getQuery, getQueryFlag } from '../../src/helpers/get-query';
 import { HttpRequest } from '@azure/functions';
 
