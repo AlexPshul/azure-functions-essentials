@@ -38,7 +38,10 @@ export class ParsedBodyChain<TBody> extends BaseChain<BodyChainData<TBody>> {
       else {
         const zodInstance = typeof this.zodType === 'function' ? this.zodType({ request, context }) : this.zodType;
         const parseResult = zodInstance.safeParse(unknownBody);
-        if (!parseResult.success) return funcResult('BadRequest', parseResult.error.issues);
+        if (!parseResult.success) {
+          context.error('Invalid body', parseResult.error.issues);
+          return funcResult('BadRequest', parseResult.error.issues);
+        }
         body = parseResult.data;
       }
 
