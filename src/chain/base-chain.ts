@@ -1,11 +1,16 @@
 import { HttpResponseInit } from '@azure/functions';
 import { funcResult } from '../helpers';
+import { anyGuard } from './any-guard';
 import { BasicChainData, ChainLink, ChainLinkResult, Guard, InputBinding, LinkFunctor } from './types';
 
 const defaultErrors: Record<ChainLink<BasicChainData>['type'], HttpResponseInit> = {
   guard: funcResult('Forbidden', "I'm sorry, kiddo. I really am."),
   inputBinding: funcResult('InternalServerError', 'There is no spoon'),
 };
+
+const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(
+  guards: Guard[] | [LinkFunctor<TChainData, Guard[]>],
+): guards is Guard[] => typeof guards[0] !== 'function';
 
 export abstract class BaseChain<TChainData extends BasicChainData = BasicChainData> {
   protected chainLink: ChainLink<TChainData>[] = [];
@@ -27,6 +32,41 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   public useGuard(guard: Guard | LinkFunctor<TChainData, Guard>): this {
     const guardFunctor = typeof guard === 'function' ? guard : () => guard;
     this.chainLink.push({ type: 'guard', functor: guardFunctor });
+    return this;
+  }
+
+  /**
+   * Registers a guard link with a list of guards.
+   * Only **one** of these guards must pass for the entire link to pass.
+   * @param guards A list of guards to be used as a single link in the chain.
+   * @returns The current chain instance
+   * @example
+   * ```ts
+   * startChain()
+   *  .useAnyGuard(guard1, guard2, guard3) // Only one of these guards must pass
+   *  .useGuard(guard4) // This guard must pass on its own
+   *  .handle(handler);
+   * ```
+   */
+  public useAnyGuard(...guards: [Guard, ...Guard[]]): this;
+  /**
+   * Registers a guard link with a list of guards.
+   * Only **one** of these guards must pass for the entire link to pass.
+   * @param guards A function that returns a list of guards to be used as a single link in the chain.
+   * @returns The current chain instance
+   * @example
+   * ```ts
+   * startChain()
+   *  this.useAnyGuard(({ request, context }) => [guard1, guard2]); // Only one of these guards must pass
+   *  .useGuard(guard4) // This guard must pass on its own
+   *  .handle(handler);
+   * ```
+   */
+  public useAnyGuard(guardsFunctor: LinkFunctor<TChainData, Guard[]>): this;
+  public useAnyGuard(...guards: Guard[] | [LinkFunctor<TChainData, Guard[]>]) {
+    if (isArrayOfGuards(guards)) this.chainLink.push({ type: 'guard', functor: () => anyGuard(...guards) });
+    else this.chainLink.push({ type: 'guard', functor: data => anyGuard(...guards[0](data)) });
+
     return this;
   }
 
