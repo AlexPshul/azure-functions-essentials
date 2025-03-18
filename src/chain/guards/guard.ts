@@ -1,4 +1,4 @@
-import { Guard } from './types';
+import { Guard } from '../types';
 
 /**
  * Creates a guard instance with a check function.

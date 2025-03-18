@@ -1,9 +1,6 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { guard } from '../../src/chain/guard';
-import { inputFactory } from '../../src/chain/input-factory';
-import { ParsedBodyChain } from '../../src/chain/parsed-body-chain';
-import { funcResult } from '../../src/helpers';
+import { funcResult, guard, inputFactory, ParsedBodyChain } from '../../src';
 
 describe('ParsedBodyChain', () => {
   // Mock objects

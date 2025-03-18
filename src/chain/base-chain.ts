@@ -1,6 +1,6 @@
 import { HttpResponseInit } from '@azure/functions';
 import { funcResult } from '../helpers';
-import { anyGuard } from './any-guard';
+import { anyGuard } from './guards';
 import { BasicChainData, ChainLink, ChainLinkResult, Guard, InputBinding, LinkFunctor } from './types';
 
 const defaultErrors: Record<ChainLink<BasicChainData>['type'], HttpResponseInit> = {

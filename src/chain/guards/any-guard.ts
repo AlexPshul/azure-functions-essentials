@@ -1,6 +1,6 @@
-import { funcResult } from '../helpers';
+import { funcResult } from '../../helpers';
+import { Guard } from '../types';
 import { guard } from './guard';
-import { Guard } from './types';
 
 /**
  * Creates a guard that checks if any of the provided guards pass.

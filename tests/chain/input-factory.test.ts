@@ -1,5 +1,5 @@
 import { InvocationContext } from '@azure/functions';
-import { inputFactory } from '../../src/chain/input-factory';
+import { inputFactory } from '../../src';
 
 describe('inputFactory', () => {
   // Mock context with extraInputs Map

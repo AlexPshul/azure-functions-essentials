@@ -1,6 +1,5 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
-import { guard } from '../../src/chain/guard';
-import { funcResult } from '../../src/helpers';
+import { funcResult, guard } from '../../src';
 
 describe('guard', () => {
   // Mock objects for HttpRequest and InvocationContext
