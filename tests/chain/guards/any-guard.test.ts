@@ -1,5 +1,5 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
-import { BaseChain, funcResult, guard } from '../../src';
+import { BaseChain, funcResult, guard } from '../../../src';
 
 // Create a concrete implementation of the abstract BaseChain for testing
 class TestChain extends BaseChain {

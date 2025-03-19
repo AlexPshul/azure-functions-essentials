@@ -10,6 +10,9 @@ This TypeScript library provides essential utilities for Azure Functions NodeJS 
 
 - Use camelCase for variable and function names
 - Prefer concise expressions; avoid unnecessary braces where possible
+  - Use arrow functions for anonymous functions
+  - Don't use {} for single-line arrow functions
+  - Don't use {} for single-line if statements or loops
 - Use proper TypeScript types throughout the codebase
 - Follow the existing style enforced by Prettier
 
