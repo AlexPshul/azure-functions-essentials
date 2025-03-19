@@ -63,13 +63,12 @@ describe('inputFactory', () => {
   it('should handle async data fetching', async () => {
     // Arrange
     const testKey = 'asyncData';
-    const testValue = { result: 'complex-data' };
     const dataFetch = jest.fn().mockImplementation(async (input: number) => {
       return { result: `complex-data-${input}` };
     });
 
     // Act
-    const testInput = inputFactory<number, typeof testValue>(testKey, dataFetch);
+    const testInput = inputFactory<number, { result: string }>(testKey, dataFetch);
     const binding = testInput.create(42);
     await binding.set(mockContext);
     const retrievedValue = testInput.get(mockContext);

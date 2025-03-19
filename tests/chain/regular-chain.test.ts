@@ -84,7 +84,7 @@ describe('RegularChain', () => {
       const passingGuardCheck = jest.fn(() => true);
       const testInput = inputFactory<string, string>('test', async data => data.toUpperCase());
       const binding = testInput.create('test-data');
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
 
       const chain = new RegularChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
 
@@ -108,7 +108,7 @@ describe('RegularChain', () => {
 
       const schema = z.object({ name: z.string(), age: z.number().min(18) });
 
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
 
       const chain = new RegularChain();
 
@@ -151,7 +151,7 @@ describe('RegularChain', () => {
 
       const schemaFn = jest.fn(() => z.object({ name: z.string(), age: z.number().min(18) }));
 
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
 
       const chain = new RegularChain();
 

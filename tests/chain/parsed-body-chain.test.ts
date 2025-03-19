@@ -24,7 +24,7 @@ describe('ParsedBodyChain', () => {
       const requestBody = { name: 'Test', age: 30 };
       (mockRequest.json as jest.Mock).mockResolvedValue(requestBody);
 
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
 
       const chain = new ParsedBodyChain(undefined);
 
@@ -46,9 +46,9 @@ describe('ParsedBodyChain', () => {
       // Create a guard that uses the body data
       // (body.age >= 18 ? true : funcResult('Forbidden', 'Age must be at least 18'))
       const bodyCheckGuardFunc = jest.fn().mockImplementation(body => (body.age >= 18 ? true : funcResult('Forbidden', 'Age must be at least 18')));
-      const bodyCheckGuard = (body: typeof requestBody) => guard((req, ctx) => bodyCheckGuardFunc(body));
+      const bodyCheckGuard = (body: typeof requestBody) => guard(() => bodyCheckGuardFunc(body));
 
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => funcResult('OK', `User ${body.name} is ${body.age} years old`));
+      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', `User ${body.name} is ${body.age} years old`));
 
       const chain = new ParsedBodyChain<typeof requestBody>(undefined).useGuard(({ body }) => bodyCheckGuard(body));
 
@@ -73,7 +73,7 @@ describe('ParsedBodyChain', () => {
         age: z.number().min(18),
       });
 
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
 
       const chain = new ParsedBodyChain(schema);
 
@@ -99,9 +99,7 @@ describe('ParsedBodyChain', () => {
         }),
       );
 
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => {
-        return funcResult('OK', body);
-      });
+      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
 
       const chain = new ParsedBodyChain(schemaFn);
 
