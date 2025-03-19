@@ -21,6 +21,8 @@ This TypeScript library provides essential utilities for Azure Functions NodeJS 
 ### Documentation
 
 - Use comprehensive JSDoc comments for all public APIs
+- Don't leave comments inside the code to explain the code. Comment ONLY if this is needed because of a workaround. General rule of thumb: explain the why, not the what.
+- Avoid redundant comments that do not add value to the understanding of the code
 - Include @param, @returns, @throws, and @example sections when applicable
 - Keep comments clear and concise with an occasional subtle touch of humor
 - Document edge cases and potential pitfalls
