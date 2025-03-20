@@ -1,0 +1,34 @@
+name: Full CI/CD
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  release:
+    types: [created]
+
+jobs:
+  Release:
+    name: Build, test and release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install dependencies 🛠️
+        run: npm ci
+      - name: Build project 👷‍♂️🏗️
+        run: npm run build
+      - name: Unit Testing 🧪
+        run: npm run test:all
+      - name: E2E Testing 🧪
+        run: npm run e2e:all
+      - name: Publish package on NPM 📦
+        if: ${{ github.event_name == 'release' }}
+        run: npm publish dist --access=public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
