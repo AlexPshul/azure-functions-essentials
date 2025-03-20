@@ -16,6 +16,7 @@ describe('headerGuard', () => {
     });
 
     mockContext = new InvocationContext();
+    mockContext.error = jest.fn(); // Mock the error function
   });
 
   it('should pass when header matches expected string value', async () => {
@@ -52,6 +53,7 @@ describe('headerGuard', () => {
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));
+    expect(mockContext.error).toHaveBeenCalledWith(expect.stringContaining('Content-Type'));
   });
 
   it('should fail when required header is missing', async () => {
@@ -63,5 +65,6 @@ describe('headerGuard', () => {
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));
+    expect(mockContext.error).toHaveBeenCalledWith(expect.stringContaining('Content-Type'));
   });
 });

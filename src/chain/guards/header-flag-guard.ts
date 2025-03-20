@@ -1,5 +1,6 @@
 import { funcResult } from '../../helpers';
 import { getHeaderFlag } from '../../helpers/get-header';
+import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
 /**
@@ -21,9 +22,9 @@ export const headerFlagGuard = (headerName: string) =>
       if (headerValue) return true;
 
       // Log the actual values for debugging but don't expose in the response
-      ctx.log(`Missing the flag [${headerName}] in the request headers.`);
+      ctx.error(`Missing the flag [${headerName}] in the request headers.`);
 
-      return funcResult('Forbidden', 'Missing or invalid header');
+      return DEFAULT_WRONG_HEADER_RESPONSE;
     } catch (error) {
       return error instanceof Error
         ? funcResult('Forbidden', error.message)

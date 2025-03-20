@@ -1,5 +1,6 @@
 import { funcResult } from '../../helpers';
 import { getHeader } from '../../helpers/get-header';
+import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
 /**
@@ -20,9 +21,9 @@ export const headerGuard = (headerName: string, expectedValue: string) =>
 
       if (headerValue === expectedValue) return true;
 
-      ctx.log(`Header [${headerName}] has unexpected value. Expected: ${expectedValue}, Actual: ${headerValue}`);
+      ctx.error(`Header [${headerName}] has unexpected value. Expected: ${expectedValue}, Actual: ${headerValue}`);
 
-      return funcResult('Forbidden', 'Missing or invalid header');
+      return DEFAULT_WRONG_HEADER_RESPONSE;
     } catch (error) {
       return error instanceof Error
         ? funcResult('Forbidden', error.message)

@@ -1,4 +1,5 @@
 import { getHeaderArray } from '../../helpers';
+import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
 /**
@@ -9,10 +10,13 @@ import { guard } from './guard';
  * @returns A guard function that validates the presence of values in the header
  */
 export const allValuesHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard(req => {
+  guard((req, context) => {
     const headerArray = getHeaderArray(req, header, separator);
 
-    return values.every(value => headerArray.includes(value));
+    if (values.every(value => headerArray.includes(value))) return true;
+
+    context.error(`Header ${header} is missing required values: ${values.join(', ')}`);
+    return DEFAULT_WRONG_HEADER_RESPONSE;
   });
 
 /**
@@ -23,10 +27,13 @@ export const allValuesHeaderGuard = (header: string, values: string[], separator
  * @returns A guard function that validates the presence of values in the header
  */
 export const exactValuesHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard(req => {
+  guard((req, context) => {
     const headerArray = getHeaderArray(req, header, separator);
 
-    return headerArray.length === values.length && values.every(value => headerArray.includes(value));
+    if (headerArray.length === values.length && values.every(value => headerArray.includes(value))) return true;
+
+    context.error(`Header ${header} does not exactly match required values: ${values.join(', ')}`);
+    return DEFAULT_WRONG_HEADER_RESPONSE;
   });
 
 /**
@@ -37,8 +44,11 @@ export const exactValuesHeaderGuard = (header: string, values: string[], separat
  * @return A guard function that validates the presence of values in the header
  * */
 export const atLeastOneHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard(req => {
+  guard((req, context) => {
     const headerArray = getHeaderArray(req, header, separator);
 
-    return values.some(value => headerArray.includes(value));
+    if (values.some(value => headerArray.includes(value))) return true;
+
+    context.error(`Header ${header} is missing at least one of the required values: ${values.join(', ')}`);
+    return DEFAULT_WRONG_HEADER_RESPONSE;
   });

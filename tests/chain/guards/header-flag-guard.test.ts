@@ -16,7 +16,7 @@ describe('headerFlagGuard', () => {
     });
 
     context = new InvocationContext();
-    jest.spyOn(context, 'log');
+    context.error = jest.fn(); // Mock the log function
   });
 
   it('should pass when header exists with "true" value', async () => {
@@ -71,7 +71,7 @@ describe('headerFlagGuard', () => {
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));
-    expect(context.log).toHaveBeenCalledWith(expect.stringContaining('X-Feature-Enabled'));
+    expect(context.error).toHaveBeenCalledWith(expect.stringContaining('X-Feature-Enabled'));
   });
 
   it('should fail when header is missing', async () => {
@@ -83,7 +83,7 @@ describe('headerFlagGuard', () => {
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));
-    expect(context.log).toHaveBeenCalledWith(expect.stringContaining('X-Feature-Enabled'));
+    expect(context.error).toHaveBeenCalledWith(expect.stringContaining('X-Feature-Enabled'));
   });
 
   it('should be case-insensitive when checking for "false" value', async () => {
