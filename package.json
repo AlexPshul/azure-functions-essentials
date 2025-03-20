@@ -4,7 +4,7 @@
   "description": "Essential utilities for Azure Functions",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && shx cp README.md dist/README.md && shx cp LICENSE dist/LICENSE",
+    "build": "tsc && shx cp README.md dist/README.md && shx cp LICENSE dist/LICENSE && shx cp package.json dist/package.json",
     "test": "jest",
     "prepare": "is-ci || husky install",
     "lint": "eslint .",
