@@ -1,9 +1,6 @@
-# 🧙‍♂️ Azure Functions Essentials
+# ⚡ Azure Functions Essentials
 
-> "Because even serverless ninjas need the right tools!"
-
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![npm version](https://img.shields.io/badge/npm-v1.0.0-blue)](https://www.npmjs.com/package/azure-functions-essentials)
+> Your go to library for building Azure Functions with TypeScript!
 
 A magical TypeScript utility belt for Azure Functions developers who are tired of writing the same boilerplate code over and over again. This library will make your functions more readable, maintainable, and less prone to "It works on my machine" syndrome.
 
