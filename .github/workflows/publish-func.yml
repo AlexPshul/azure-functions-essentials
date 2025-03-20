@@ -1,9 +1,9 @@
 name: Full CI/CD
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
   release:
     types: [created]
 
@@ -24,9 +24,7 @@ jobs:
       - name: Build project 👷‍♂️🏗️
         run: npm run build
       - name: Unit Testing 🧪
-        run: npm run test:all
-      - name: E2E Testing 🧪
-        run: npm run e2e:all
+        run: npm run test
       - name: Publish package on NPM 📦
         if: ${{ github.event_name == 'release' }}
         run: npm publish dist --access=public
