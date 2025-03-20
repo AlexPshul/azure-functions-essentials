@@ -59,6 +59,7 @@ app.post('super-secret-endpoint', {
 ```
 
 ### 🛡️ Guards
+> For more details and the list of built-in guards, check out the [Guards Documentation](./src/chain/guards).
 
 Keep the bad guys out:
 
