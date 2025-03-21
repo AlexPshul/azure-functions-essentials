@@ -59,7 +59,8 @@ app.post('super-secret-endpoint', {
 ```
 
 ### 🛡️ Guards
-> For more details and the list of built-in guards, check out the [Guards Documentation](./src/chain/guards).
+
+> For more details and the list of built-in guards, check out the [Guards Documentation](https://github.com/AlexPshul/azure-functions-essentials/tree/main/src/chain/guards).
 
 Keep the bad guys out:
 
