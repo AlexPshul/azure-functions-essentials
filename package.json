@@ -3,7 +3,7 @@
   "version": "1.0.1",
   "description": "Essential utilities for Azure Functions",
   "repository": "https://github.com/AlexPshul/azure-functions-essentials",
-  "main": "dist/index.js",
+  "main": "index.js",
   "scripts": {
     "build": "tsc && shx cp README.md dist/README.md && shx cp LICENSE dist/LICENSE && shx cp package.json dist/package.json",
     "test": "jest",
