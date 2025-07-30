@@ -75,7 +75,6 @@ export const inputFactory = <TArgs, TResult>(key: string, dataFetch: (args: TArg
   });
 
   return {
-    /// Gets the input data from the context using the default name
     getNamed,
     get: context => getNamed(context, 'default'),
     createNamed,
