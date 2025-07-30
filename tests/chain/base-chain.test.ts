@@ -130,6 +130,38 @@ describe('BaseChain', () => {
       expect(nonCallableGuardCheck).not.toHaveBeenCalled(); // This guard should not be called
     });
 
+    it('should execute all chains when conditional guard value check returns a falsy value', async () => {
+      // Arrange
+      const failingGuardCheck = jest.fn().mockImplementation(() => false);
+      const chain = new TestChain().useGuardIf(() => undefined, failingGuardCheck);
+
+      // Act
+      const result = await chain.runChain(mockRequest, mockContext);
+
+      // Assert
+      expect(result).toBeUndefined(); // Chain executed successfully
+      expect(mockContext.error).not.toHaveBeenCalled();
+      expect(failingGuardCheck).not.toHaveBeenCalled(); // Guard should not be called
+    });
+
+    it('should execute all chains when conditional guard value check returns a truthy value and passed to the guard', async () => {
+      // Arrange
+      const valueToCheck = 'test-value';
+      const passingGuardCheck = jest.fn().mockImplementation((passedValue: string) => passedValue === valueToCheck);
+      const chain = new TestChain().useGuardIf(
+        () => valueToCheck,
+        ({ checkedValue }) => guard(() => passingGuardCheck(checkedValue)),
+      );
+
+      // Act
+      const result = await chain.runChain(mockRequest, mockContext);
+
+      // Assert
+      expect(result).toBeUndefined(); // Chain executed successfully
+      expect(mockContext.error).not.toHaveBeenCalled();
+      expect(passingGuardCheck).toHaveBeenCalled();
+    });
+
     it('should stop execution when an input binding fails', async () => {
       // Arrange
       const passingGuard = guard(() => true);

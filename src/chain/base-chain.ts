@@ -1,6 +1,6 @@
 import { HttpResponseInit } from '@azure/functions';
 import { funcResult } from '../helpers';
-import { anyGuard } from './guards';
+import { anyGuard, guard as guardFactory } from './guards';
 import { BasicChainData, ChainLink, ChainLinkResult, Guard, InputBindingSetter, LinkFunctor } from './types';
 
 const defaultErrors: Record<ChainLink<BasicChainData>['type'], HttpResponseInit> = {
@@ -66,6 +66,42 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   public useAnyGuard(...guards: Guard[] | [LinkFunctor<TChainData, Guard[]>]) {
     if (isArrayOfGuards(guards)) this.chainLink.push({ type: 'guard', functor: () => anyGuard(...guards) });
     else this.chainLink.push({ type: 'guard', functor: data => anyGuard(...guards[0](data)) });
+
+    return this;
+  }
+
+  /**
+   * Registers a guard in the execution chain ONLY if the `checkValueExtractor` returns a truthy value.
+   * The extracted value is then accessible to the guard function as `checkedValue`.
+   * The guard is used to check conditions on the request before further processing.
+   * @param checkValueExtractor A function that extracts a value from the chain data to check
+   * @param guard A guard instance or a function that returns a guard
+   * @example
+   * ```ts
+   * const helloWorldGuard = (value: string) => guardFactory(() => value === 'world');
+   *
+   * startChain()
+   *  .useGuardIf(
+   *    ({ request }) => getQuery(request, 'hello', true),
+   *    ({ checkedValue }) => helloWorldGuard(checkedValue),
+   *  )
+   *  .handle(async () => {
+   *    return funcResult('OK', 'Guarded only if hello is present and checks if world is the value');
+   *  });
+   * ```
+   * @returns The current chain instance
+   */
+  public useGuardIf<TCheckedValue>(
+    checkValueExtractor: LinkFunctor<TChainData, TCheckedValue | undefined | null>,
+    guardFunctor: LinkFunctor<TChainData & { checkedValue: TCheckedValue }, Guard>,
+  ): this {
+    this.chainLink.push({
+      type: 'guard',
+      functor: data => {
+        const checkedValue = checkValueExtractor(data);
+        return checkedValue ? guardFunctor({ ...data, checkedValue }) : guardFactory(() => true);
+      },
+    });
 
     return this;
   }
