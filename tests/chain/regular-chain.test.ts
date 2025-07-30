@@ -97,7 +97,7 @@ describe('RegularChain', () => {
       expect(mockRequest.json).toHaveBeenCalled();
       expect(handlerFn).toHaveBeenCalled();
       expect(result).toEqual(funcResult('OK', requestBody));
-      expect(mockContext.extraInputs.get('test')).toBe('TEST-DATA');
+      expect(testInput.get(mockContext)).toBe('TEST-DATA');
       expect(passingGuardCheck).toHaveBeenCalledWith(mockRequest, mockContext);
     });
 

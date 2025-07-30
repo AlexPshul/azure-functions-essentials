@@ -87,7 +87,7 @@ describe('BaseChain', () => {
 
       // Assert
       expect(result).toBeUndefined(); // Chain executed successfully
-      expect(mockContext.extraInputs.get('test')).toBe('TEST-DATA');
+      expect(testInput.get(mockContext)).toBe('TEST-DATA');
       expect(mockContext.error).not.toHaveBeenCalled();
     });
 
@@ -152,9 +152,8 @@ describe('BaseChain', () => {
   describe('copyFromChain', () => {
     it('should copy chain links from another chain with mapping', async () => {
       // Arrange
-      const sourceChain = new TestChain()
-        .useGuard(guard(() => true))
-        .useInputBinding(inputFactory<string, string>('test', async data => data.toUpperCase()).create('source'));
+      const testInput = inputFactory<string, string>('test', async data => data.toUpperCase());
+      const sourceChain = new TestChain().useGuard(guard(() => true)).useInputBinding(testInput.create('source'));
 
       const targetChain = new TestChain();
 
@@ -168,7 +167,7 @@ describe('BaseChain', () => {
       // Assert
       expect(result).toBe(targetChain); // Should return this for method chaining
       expect(mapFn).toHaveBeenCalled();
-      expect(mockContext.extraInputs.get('test')).toBe('SOURCE');
+      expect(testInput.get(mockContext)).toBe('SOURCE');
     });
   });
 });

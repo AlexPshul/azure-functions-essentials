@@ -1,7 +1,7 @@
 import { HttpResponseInit } from '@azure/functions';
 import { funcResult } from '../helpers';
 import { anyGuard } from './guards';
-import { BasicChainData, ChainLink, ChainLinkResult, Guard, InputBinding, LinkFunctor } from './types';
+import { BasicChainData, ChainLink, ChainLinkResult, Guard, InputBindingSetter, LinkFunctor } from './types';
 
 const defaultErrors: Record<ChainLink<BasicChainData>['type'], HttpResponseInit> = {
   guard: funcResult('Forbidden', "I'm sorry, kiddo. I really am."),
@@ -76,15 +76,15 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
    * @param input An input binding instance
    * @returns The current chain instance
    */
-  public useInputBinding<TResult>(input: InputBinding<TResult>): this;
+  public useInputBinding(input: InputBindingSetter): this;
   /**
    * Registers an input binding in the execution chain.
    * The input binding is used to set data in the context before further processing.
    * @param inputFunc A function that returns an input binding
    * @returns The current chain instance
    */
-  public useInputBinding<TResult>(input: LinkFunctor<TChainData, InputBinding<TResult>>): this;
-  public useInputBinding<TResult>(input: InputBinding<TResult> | LinkFunctor<TChainData, InputBinding<TResult>>) {
+  public useInputBinding(input: LinkFunctor<TChainData, InputBindingSetter>): this;
+  public useInputBinding(input: InputBindingSetter | LinkFunctor<TChainData, InputBindingSetter>) {
     const inputFunctor = typeof input === 'function' ? input : () => input;
     this.chainLink.push({ type: 'inputBinding', functor: inputFunctor });
     return this;

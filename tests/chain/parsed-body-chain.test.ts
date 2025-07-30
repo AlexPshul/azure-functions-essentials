@@ -136,7 +136,8 @@ describe('ParsedBodyChain', () => {
       expect(handlerFn).not.toHaveBeenCalled();
       expect(result.status).toBe(400); // BadRequest status
 
-      if ('jsonBody' in result) expect(result.jsonBody).toBeDefined(); // Should include validation errors
+      if ('jsonBody' in result)
+        expect(result.jsonBody).toBeDefined(); // Should include validation errors
       else fail('Expected result to include a JSON body with validation errors');
     });
   });
@@ -168,7 +169,7 @@ describe('ParsedBodyChain', () => {
 
       // Assert
       expect(handlerFn).toHaveBeenCalled();
-      expect(mockContext.extraInputs.get('test')).toBe('TEST');
+      expect(testInput.get(mockContext)).toBe('TEST');
       expect(result).toEqual(funcResult('OK', { ...requestBody, name: 'TEST' }));
       expect(passingGuardCheck).toHaveBeenCalled();
     });
