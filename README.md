@@ -87,7 +87,7 @@ const userLookup = inputFactory<string, User>('user', async userId => {
 
 ### 🌊 HTTP Streaming
 
-`funcResult` also supports Azure Functions HTTP stream bodies, so returning a stream is as simple as returning text or JSON:
+`funcResult` supports Azure Functions HTTP stream bodies, so returning a native stream is as simple as returning text or JSON:
 
 ```typescript
 import { Readable } from 'stream';
@@ -97,6 +97,30 @@ app.get('download-report', {
   handler: async () => {
     const reportStream = Readable.from(['col1,col2\n', '1,2\n']);
     return funcResult('OK', reportStream);
+  },
+});
+```
+
+If a popular LLM or agent SDK gives you a stream of rich events instead of raw HTTP chunks, you can also provide the source stream together with an `extractChunk` function.
+
+Here is a LangChain-style example where the agent yields structured streaming events, and we extract just the text tokens for the HTTP response:
+
+```typescript
+import { app, setup } from '@azure/functions';
+import { createAgent } from 'langchain';
+import { funcResult } from 'azure-functions-essentials';
+
+setup({ enableHttpStream: true });
+
+const agent = createAgent({ model: 'openai:gpt-5.4', tools: [] });
+
+app.post('chat', {
+  handler: async request => {
+    const { message } = await request.json();
+
+    const stream = await agent.stream({ messages: [{ role: 'user', content: message }] }, { streamMode: 'messages' });
+
+    return funcResult('OK', stream, ([token]) => token.text ?? undefined);
   },
 });
 ```
