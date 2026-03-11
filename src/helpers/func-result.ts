@@ -57,10 +57,13 @@ const HttpStatusCode = {
 
 type HttpStatusCodeName = keyof typeof HttpStatusCode;
 type StreamResponseBody = Exclude<HttpResponseBodyInit, string | null | undefined>;
+type HttpChunk = string | Uint8Array;
+type ExtractChunk<T> = (item: T) => HttpChunk | null | undefined;
 
+const textEncoder = new TextEncoder();
 const isBlob = (value: unknown): value is Blob => typeof Blob !== 'undefined' && value instanceof Blob;
 const isFormData = (value: unknown): value is FormData => typeof FormData !== 'undefined' && value instanceof FormData;
-const isAsyncIterable = (value: unknown): value is AsyncIterable<Uint8Array> =>
+const isAsyncIterable = <T = unknown>(value: unknown): value is AsyncIterable<T> =>
   typeof value === 'object' && value !== null && Symbol.asyncIterator in value;
 const isStreamResponseBody = (value: unknown): value is StreamResponseBody =>
   value instanceof Readable ||
@@ -70,7 +73,16 @@ const isStreamResponseBody = (value: unknown): value is StreamResponseBody =>
   value instanceof URLSearchParams ||
   isBlob(value) ||
   isFormData(value) ||
-  isAsyncIterable(value);
+  isAsyncIterable<Uint8Array>(value);
+
+async function* toHttpChunks<T>(source: AsyncIterable<T>, extractChunk: ExtractChunk<T>): AsyncIterable<Uint8Array> {
+  for await (const item of source) {
+    const chunk = extractChunk(item);
+    if (chunk === undefined || chunk === null) continue;
+
+    yield typeof chunk === 'string' ? textEncoder.encode(chunk) : chunk;
+  }
+}
 
 /**
  * A helper to easily create the current Azure function result object.
@@ -88,6 +100,18 @@ export function funcResult(status: HttpStatusCodeName, message: string): { statu
 /**
  * A helper to easily create the current Azure function result object.
  * @param status - The HTTP status code name (e.g. 'OK', 'BadRequest', etc.)
+ * @param source - An async iterable whose items should be converted into HTTP-safe chunks by `extractChunk`.
+ * @param extractChunk - Extracts the actual text or bytes to emit for each source item. Return null or undefined to skip emitting a chunk for an item.
+ * @returns The Azure function result object with the status code and the adapted stream body.
+ */
+export function funcResult<T>(
+  status: HttpStatusCodeName,
+  source: AsyncIterable<T>,
+  extractChunk: ExtractChunk<T>,
+): { status: number; body: AsyncIterable<Uint8Array> };
+/**
+ * A helper to easily create the current Azure function result object.
+ * @param status - The HTTP status code name (e.g. 'OK', 'BadRequest', etc.)
  * @param message - A stream-capable HTTP response body supported by Azure Functions.
  * @returns The Azure function result object with the status code and the stream body.
  */
@@ -100,12 +124,10 @@ export function funcResult<TBody extends StreamResponseBody>(status: HttpStatusC
  */
 export function funcResult<T>(status: HttpStatusCodeName, message: T): { status: number; jsonBody: T };
 
-export function funcResult<T>(status: HttpStatusCodeName, message?: string | StreamResponseBody | T) {
+export function funcResult<T>(status: HttpStatusCodeName, message?: string | StreamResponseBody | T, extractChunk?: ExtractChunk<T>) {
   if (arguments.length === 1 || message === undefined) return { status: HttpStatusCode[status] };
-
-  if (typeof message === 'string' || isStreamResponseBody(message)) {
-    return { status: HttpStatusCode[status], body: message };
-  }
+  if (extractChunk && isAsyncIterable<T>(message)) return { status: HttpStatusCode[status], body: toHttpChunks(message, extractChunk) };
+  if (typeof message === 'string' || isStreamResponseBody(message)) return { status: HttpStatusCode[status], body: message };
 
   return { status: HttpStatusCode[status], jsonBody: message };
 }
