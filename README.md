@@ -85,6 +85,22 @@ const userLookup = inputFactory<string, User>('user', async userId => {
 .useInputBinding(({ request }) => userLookup.create(request.params.userId))
 ```
 
+### 🌊 HTTP Streaming
+
+`funcResult` also supports Azure Functions HTTP stream bodies, so returning a stream is as simple as returning text or JSON:
+
+```typescript
+import { Readable } from 'stream';
+import { funcResult } from 'azure-functions-essentials';
+
+app.get('download-report', {
+  handler: async () => {
+    const reportStream = Readable.from(['col1,col2\n', '1,2\n']);
+    return funcResult('OK', reportStream);
+  },
+});
+```
+
 ### 🧩 Query Parameters
 
 Parse query params without pulling your hair out:

@@ -1,3 +1,7 @@
+import { HttpResponseBodyInit } from '@azure/functions';
+import { Readable } from 'stream';
+import { ReadableStream } from 'stream/web';
+
 // All HttpStatusCodes are from https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 const HttpStatusCode = {
   OK: 200,
@@ -52,6 +56,21 @@ const HttpStatusCode = {
 };
 
 type HttpStatusCodeName = keyof typeof HttpStatusCode;
+type StreamResponseBody = Exclude<HttpResponseBodyInit, string | null | undefined>;
+
+const isBlob = (value: unknown): value is Blob => typeof Blob !== 'undefined' && value instanceof Blob;
+const isFormData = (value: unknown): value is FormData => typeof FormData !== 'undefined' && value instanceof FormData;
+const isAsyncIterable = (value: unknown): value is AsyncIterable<Uint8Array> =>
+  typeof value === 'object' && value !== null && Symbol.asyncIterator in value;
+const isStreamResponseBody = (value: unknown): value is StreamResponseBody =>
+  value instanceof Readable ||
+  value instanceof ReadableStream ||
+  value instanceof ArrayBuffer ||
+  ArrayBuffer.isView(value) ||
+  value instanceof URLSearchParams ||
+  isBlob(value) ||
+  isFormData(value) ||
+  isAsyncIterable(value);
 
 /**
  * A helper to easily create the current Azure function result object.
@@ -69,13 +88,24 @@ export function funcResult(status: HttpStatusCodeName, message: string): { statu
 /**
  * A helper to easily create the current Azure function result object.
  * @param status - The HTTP status code name (e.g. 'OK', 'BadRequest', etc.)
+ * @param message - A stream-capable HTTP response body supported by Azure Functions.
+ * @returns The Azure function result object with the status code and the stream body.
+ */
+export function funcResult<TBody extends StreamResponseBody>(status: HttpStatusCodeName, message: TBody): { status: number; body: TBody };
+/**
+ * A helper to easily create the current Azure function result object.
+ * @param status - The HTTP status code name (e.g. 'OK', 'BadRequest', etc.)
  * @param message - The **object** message to be returned in the body of the response as JSON.
  * @returns The Azure function result object with the status code and a JSON object body.
  */
 export function funcResult<T>(status: HttpStatusCodeName, message: T): { status: number; jsonBody: T };
 
-export function funcResult<T>(status: HttpStatusCodeName, message?: string | T) {
-  if (!message) return { status: HttpStatusCode[status] };
+export function funcResult<T>(status: HttpStatusCodeName, message?: string | StreamResponseBody | T) {
+  if (arguments.length === 1 || message === undefined) return { status: HttpStatusCode[status] };
 
-  return typeof message === 'string' ? { status: HttpStatusCode[status], body: message } : { status: HttpStatusCode[status], jsonBody: message };
+  if (typeof message === 'string' || isStreamResponseBody(message)) {
+    return { status: HttpStatusCode[status], body: message };
+  }
+
+  return { status: HttpStatusCode[status], jsonBody: message };
 }
