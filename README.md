@@ -137,6 +137,33 @@ const page = getQuery(request, 'page', true); // Optional, returns null if missi
 const includeDeleted = getQueryFlag(request, 'includeDeleted'); // Boolean flags made easy
 ```
 
+### ⏰ Keep-Alive Timer
+
+If you need the classic Azure Functions keep-alive workaround, register a tiny timer once during startup:
+
+```typescript
+import { registerKeepAlive } from 'azure-functions-essentials';
+
+registerKeepAlive();
+```
+
+The default schedule is every 5 minutes (`0 */5 * * * *`), which is a practical balance for the timer-based workaround without being overly aggressive.
+
+You can override the timer settings if you want a different cadence, function name, or a custom log message:
+
+```typescript
+registerKeepAlive({
+  schedule: '0 */10 * * * *',
+  name: 'myKeepAlive',
+});
+```
+
+This helper is intended as a compatibility workaround for cold-start-sensitive apps. If your hosting plan supports warm-instance features, prefer those instead:
+
+- Flex Consumption: always-ready instances
+- Dedicated/App Service: Always On
+- Premium: plan warm-instance features
+
 ## 🤔 Why Use This Library?
 
 1. **Less Code**: Why write 100 lines when 10 will do?
@@ -228,7 +255,6 @@ MIT License - Use it, abuse it, but please give credit where it's due.
 ---
 
 <p align="center">
-  <img src="https://i.imgur.com/YYi5CJn.png" width="300" alt="Function wizard">
-  <br>
   <i>May your functions be stateless and your deployments be seamless!</i>
 </p>
+
