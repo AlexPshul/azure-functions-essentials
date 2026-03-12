@@ -16,6 +16,8 @@ or if you're feeling yarn-ish
 yarn add azure-functions-essentials
 ```
 
+This package requires `@azure/functions` version `4.11.0` or newer.
+
 ## ✨ Features
 
 ### 🔗 Function Chains
@@ -257,4 +259,5 @@ MIT License - Use it, abuse it, but please give credit where it's due.
 <p align="center">
   <i>May your functions be stateless and your deployments be seamless!</i>
 </p>
+
 
