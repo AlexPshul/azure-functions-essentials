@@ -7,16 +7,17 @@ A magical TypeScript utility belt for Azure Functions developers who are tired o
 ## 🚀 Installation
 
 ```bash
-npm install azure-functions-essentials
+npm install azure-functions-essentials @azure/functions@latest
 ```
 
 or if you're feeling yarn-ish
 
 ```bash
-yarn add azure-functions-essentials
+yarn add azure-functions-essentials @azure/functions@latest
 ```
 
-This package requires `@azure/functions` version `4.11.0` or newer.
+> [!IMPORTANT]
+> This package requires `@azure/functions@4.11.0` or newer as a peer dependency.
 
 ## ✨ Features
 
