@@ -2,6 +2,8 @@
 
 ## Coding style
 
+If the user asks to save something as a coding style rule, update this section.
+
 - TypeScript only. No `.js` files in `src/`.
 - Prefer `const` over `let`. Never use `var`.
 - Use `type` for type aliases, not `interface`, unless extending is needed.
