@@ -9,6 +9,7 @@ If the user asks to save something as a coding style rule, update this section.
 - Use `type` for type aliases, not `interface`, unless extending is needed.
 - Export from barrel `index.ts` files — every public module must be re-exported.
 - Only comment code that needs a bit of clarification. Do not comment otherwise.
+- Prefer descriptive variable names over abbreviations (e.g., `guard` not `g`, `request` not `req`).
 - Formatting is enforced by Prettier — do not fight it.
 - Build: `npm run build`, Test: `npm test`, Lint: `npm run lint`.
 

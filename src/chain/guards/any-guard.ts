@@ -10,8 +10,8 @@ import { guard } from './guard';
 export const anyGuard = <T = unknown>(...guards: Guard<T>[]): Guard<T> =>
   guard<T>(async chainData => {
     const results = [];
-    for (const g of guards) {
-      const result = await g.check(chainData);
+    for (const guard of guards) {
+      const result = await guard.check(chainData);
       results.push(result);
       if (result === true) return true;
     }
