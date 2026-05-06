@@ -22,11 +22,11 @@ export class RegularChain<TTriggerData = unknown, TResponseType extends Response
   ): (triggerData: TTriggerData, context: InvocationContext) => Promise<TResponseType extends 'http' ? HttpResponseInit : void> {
     return (async (triggerData: TTriggerData, context: InvocationContext) => {
       const chainData: BasicChainData<TTriggerData> = { triggerData, context };
-      const failedGuardResult = await this.executeChain(chainData);
+      const failure = await this.executeChain(chainData);
 
-      if (failedGuardResult) {
-        if (this.isHttpResponse()) return failedGuardResult;
-        throw new ChainGuardError(failedGuardResult, -1, 'guard');
+      if (failure) {
+        if (this.isHttpResponse()) return failure.result;
+        throw new ChainGuardError(failure.result, failure.linkIndex, failure.linkType);
       }
 
       const result = await (handler as HttpChainHandler<TTriggerData, TResultBody>)(triggerData, context);

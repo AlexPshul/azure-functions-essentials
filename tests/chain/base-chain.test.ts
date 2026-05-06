@@ -104,6 +104,8 @@ describe('BaseChain', () => {
 
       // Assert
       expect(result).toBeDefined();
+      expect(result?.linkIndex).toBe(1);
+      expect(result?.linkType).toBe('guard');
       expect(mockContext.error).toHaveBeenCalled();
       expect(passingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
       expect(failingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
@@ -123,7 +125,9 @@ describe('BaseChain', () => {
       const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
-      expect(result).toBe(customResponse);
+      expect(result?.result).toBe(customResponse);
+      expect(result?.linkIndex).toBe(1);
+      expect(result?.linkType).toBe('guard');
       expect(mockContext.error).toHaveBeenCalled();
       expect(passingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
       expect(failingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
@@ -177,7 +181,8 @@ describe('BaseChain', () => {
 
       // Assert
       expect(mockContext.error).toHaveBeenCalled();
-      expect(result).toEqual(funcResult('InternalServerError', 'There is no spoon')); // Chain execution failed
+      expect(result?.result).toEqual(funcResult('InternalServerError', 'There is no spoon')); // Chain execution failed
+      expect(result?.linkType).toBe('inputBinding');
     });
   });
 

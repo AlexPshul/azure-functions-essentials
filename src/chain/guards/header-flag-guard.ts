@@ -6,13 +6,14 @@ import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
 /**
- * Creates a guard that checks if a specific header flag has the expected boolean value.
+ * Creates a guard that checks if a specific header exists with a truthful value.
+ * The header is considered truthful if it is present and its value is not "false" (case-insensitive).
  *
  * @param headerName - The name of the header to check
- * @returns A guard that checks if the header exists and has the expected boolean value
+ * @returns A guard that checks if the header exists and has a truthful value
  *
  * @example
- * // Check if x-feature-enabled header is true
+ * // Check if x-feature-enabled header is truthful
  * const featureEnabledGuard = headerFlagGuard('x-feature-enabled');
  */
 export const headerFlagGuard = (headerName: string): Guard<HttpRequest> =>

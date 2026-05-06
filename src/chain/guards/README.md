@@ -28,8 +28,8 @@ Full list of guards:
 This is the foundational tool for creating guards. It validates requests and either allows them to proceed (returning `true`) or blocks them with an appropriate response.
 
 ```typescript
-const customGuard = guard((req, ctx) => {
-  return req.headers.get('x-secret') === 'there is no spoon' || funcResult('Forbidden', `I'm sorry, Dave. I'm afraid I can't do that.`);
+const customGuard = guard(({ triggerData, context }) => {
+  return triggerData.headers.get('x-secret') === 'there is no spoon' || funcResult('Forbidden', `I'm sorry, Dave. I'm afraid I can't do that.`);
 });
 ```
 
@@ -76,9 +76,9 @@ const accessGuard = anyGuard(adminGuard, ownerGuard, specialPermissionGuard);
 You can also use the built-in `useAnyGuard` method to combine multiple guards in a chain:
 
 ```typescript
-startChain()
+startHttpChain()
   .useAnyGuard(adminGuard, ownerGuard, specialPermissionGuard)
-  .handle((req, ctx) => {
+  .handle((triggerData, ctx) => {
     // Only if any of the guards pass will this code execute
     return funcResult('OK', 'Access granted.');
   });
@@ -101,10 +101,10 @@ const userGuard = validateInputExistsGuard(cosmosDbInput);
 3. **Secure** your function by validating requests before processing.
 
 ```typescript
-startChain()
+startHttpChain()
   .useGuard(headerGuard('Content-Type', 'application/json'))
   .useGuard(adminGuard)
-  .handle((req, ctx) => {
+  .handle((triggerData, ctx) => {
     // Only admins with JSON requests reach this point
     return funcResult('OK', 'Access granted.');
   });
@@ -115,9 +115,9 @@ startChain()
 To allow different types of users through, use `useAnyGuard` for OR conditions:
 
 ```typescript
-startChain()
+startHttpChain()
   .useAnyGuard(adminGuard, moderatorGuard, resourceOwnerGuard)
-  .handle((req, ctx) => {
+  .handle((triggerData, ctx) => {
     // Any of the above guards passing will allow access
     return funcResult('OK', 'Access granted.');
   });
@@ -129,7 +129,7 @@ You can create custom guards to handle specific validation logic:
 
 ```typescript
 // Guard that allows requests only during business hours
-const businessHoursGuard = guard((req, ctx) => {
+const businessHoursGuard = guard(({ context }) => {
   const hour = new Date().getHours();
   return (hour >= 9 && hour < 17) || funcResult('Forbidden', 'Service is available only during business hours (9 AM - 5 PM).');
 });

@@ -59,11 +59,11 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
       }
 
       const chainData: ParsedChainData<TTriggerData, TData> = { triggerData, context, parsedData };
-      const failedGuardResult = await this.executeChain(chainData);
+      const failure = await this.executeChain(chainData);
 
-      if (failedGuardResult) {
-        if (this.responseType === 'http') return failedGuardResult;
-        throw new ChainGuardError(failedGuardResult, -1, 'guard');
+      if (failure) {
+        if (this.responseType === 'http') return failure.result;
+        throw new ChainGuardError(failure.result, failure.linkIndex, failure.linkType);
       }
 
       const result = await (handler as HttpParsedHandler<TTriggerData, TData, TResultBody>)(triggerData, parsedData, context);

@@ -3,6 +3,12 @@ import { funcResult } from '../helpers';
 import { anyGuard, guard as guardFactory } from './guards';
 import { BasicChainData, ChainLink, ChainLinkResult, Guard, InputBindingSetter, LinkFunctor } from './types';
 
+export type ChainFailure = {
+  result: HttpResponseInit;
+  linkIndex: number;
+  linkType: 'guard' | 'inputBinding';
+};
+
 const defaultErrors: Record<ChainLink<BasicChainData>['type'], HttpResponseInit> = {
   guard: funcResult('Forbidden', "I'm sorry, kiddo. I really am."),
   inputBinding: funcResult('InternalServerError', 'There is no spoon'),
@@ -119,7 +125,7 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
     return this;
   }
 
-  protected async executeChain(chainData: TChainData) {
+  protected async executeChain(chainData: TChainData): Promise<ChainFailure | undefined> {
     const { context } = chainData;
     for (const [index, link] of this.chainLink.entries()) {
       try {
@@ -136,12 +142,12 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
         if (linkResult !== true) {
           const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
           context.error(`Link #${index} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
-          return linkError;
+          return { result: linkError, linkIndex: index, linkType: link.type };
         }
       } catch (error) {
         const linkError = defaultErrors[link.type];
         context.error(`Link #${index} (${link.type}) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`);
-        return linkError;
+        return { result: linkError, linkIndex: index, linkType: link.type };
       }
     }
 

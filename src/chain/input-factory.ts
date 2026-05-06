@@ -44,16 +44,16 @@ type InputBinding<TArgs, TResult> = Getters<TResult> & Creators<TArgs>;
  * const upperCaseInput = inputFactory<string, string>('upperCase', async from => from.toUpperCase());
  *
  * app.get('/to-upper-case', {
- *   handler: startChain()
- *     .useInputBinding(({ request }) => upperCaseInput.create(getQuery(request, 'text')))
+ *   handler: startHttpChain()
+ *     .useInputBinding(({ triggerData }) => upperCaseInput.create(getQuery(triggerData, 'text')))
  *     .handle((_, context) => funcResult('Ok', upperCaseInput.get(context)));
  * });
  *
  * // Or a named input binding that allows for same binding with different params
  * app.get('/to-upper-case-named', {
- *  handler: startChain()
- *    .useInputBinding(({ request }) => upperCaseInput.createNamed(getQuery(request, 'firstName'), 'nameA'))
- *    .useInputBinding(({ request }) => upperCaseInput.createNamed(getQuery(request, 'lastName'), 'nameB'))
+ *  handler: startHttpChain()
+ *    .useInputBinding(({ triggerData }) => upperCaseInput.createNamed(getQuery(triggerData, 'firstName'), 'nameA'))
+ *    .useInputBinding(({ triggerData }) => upperCaseInput.createNamed(getQuery(triggerData, 'lastName'), 'nameB'))
  *    .handle((_, context) => {
  *      const upperCaseFirstName = upperCaseInput.getNamed(context, 'nameA');
  *      const upperCaseLastName = upperCaseInput.getNamed(context, 'nameB');

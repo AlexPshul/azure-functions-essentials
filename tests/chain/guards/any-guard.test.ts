@@ -66,7 +66,7 @@ describe('BaseChain.useAnyGuard', () => {
 
       // Assert
       expect(result).toBeDefined();
-      expect(result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [customResponse, false] }));
+      expect(result?.result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [customResponse, false] }));
       expect(mockContext.error).toHaveBeenCalled();
     });
 
@@ -118,7 +118,7 @@ describe('BaseChain.useAnyGuard', () => {
       const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
-      expect(result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [customFailResponse, false] }));
+      expect(result?.result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [customFailResponse, false] }));
       expect(guardFn).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
       expect(mockContext.error).toHaveBeenCalled();
     });
@@ -179,7 +179,7 @@ describe('BaseChain.useAnyGuard', () => {
       const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
-      expect(result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [false, false] }));
+      expect(result?.result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [false, false] }));
       expect(mockContext.error).toHaveBeenCalled();
       // The regular guard should not be called since the anyGuard failed
       expect(regularGuardFn).not.toHaveBeenCalled();
