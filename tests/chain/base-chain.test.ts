@@ -2,15 +2,15 @@ import { HttpRequest, InvocationContext } from '@azure/functions';
 import { BaseChain, funcResult, guard, inputFactory } from '../../src';
 
 // Create a concrete implementation of the abstract BaseChain for testing
-class TestChain extends BaseChain {
-  public async runChain(request: HttpRequest, context: InvocationContext) {
-    return this.executeChain({ request, context });
+class TestChain extends BaseChain<{ triggerData: HttpRequest; context: InvocationContext }> {
+  public async runChain(triggerData: HttpRequest, context: InvocationContext) {
+    return this.executeChain({ triggerData, context });
   }
 }
 
 describe('BaseChain', () => {
   // Mock objects
-  const mockRequest = {} as HttpRequest;
+  const mockTriggerData = {} as HttpRequest;
   let mockContext: InvocationContext;
 
   beforeEach(() => {
@@ -83,7 +83,7 @@ describe('BaseChain', () => {
       const chain = new TestChain().useGuard(testGuard).useInputBinding(binding);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeUndefined(); // Chain executed successfully
@@ -100,13 +100,13 @@ describe('BaseChain', () => {
       const chain = new TestChain().useGuard(guard(passingGuardCheck)).useGuard(guard(failingGuardCheck)).useGuard(guard(nonCallableGuardCheck));
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeDefined();
       expect(mockContext.error).toHaveBeenCalled();
-      expect(passingGuardCheck).toHaveBeenCalledWith(mockRequest, mockContext);
-      expect(failingGuardCheck).toHaveBeenCalledWith(mockRequest, mockContext);
+      expect(passingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
+      expect(failingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
       expect(nonCallableGuardCheck).not.toHaveBeenCalled(); // This guard should not be called
     });
 
@@ -120,13 +120,13 @@ describe('BaseChain', () => {
       const chain = new TestChain().useGuard(guard(passingGuardCheck)).useGuard(guard(failingGuardCheck)).useGuard(guard(nonCallableGuardCheck));
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBe(customResponse);
       expect(mockContext.error).toHaveBeenCalled();
-      expect(passingGuardCheck).toHaveBeenCalledWith(mockRequest, mockContext);
-      expect(failingGuardCheck).toHaveBeenCalledWith(mockRequest, mockContext);
+      expect(passingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
+      expect(failingGuardCheck).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
       expect(nonCallableGuardCheck).not.toHaveBeenCalled(); // This guard should not be called
     });
 
@@ -136,7 +136,7 @@ describe('BaseChain', () => {
       const chain = new TestChain().useGuardIf(() => undefined, failingGuardCheck);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeUndefined(); // Chain executed successfully
@@ -154,7 +154,7 @@ describe('BaseChain', () => {
       );
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeUndefined(); // Chain executed successfully
@@ -173,7 +173,7 @@ describe('BaseChain', () => {
       const chain = new TestChain().useGuard(passingGuard).useInputBinding(failingBinding);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(mockContext.error).toHaveBeenCalled();
@@ -194,7 +194,7 @@ describe('BaseChain', () => {
 
       // Act
       const result = targetChain.copyFromChain(sourceChain, mapFn);
-      await targetChain.runChain(mockRequest, mockContext);
+      await targetChain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBe(targetChain); // Should return this for method chaining

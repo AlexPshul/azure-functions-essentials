@@ -1,16 +1,17 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { BaseChain, funcResult, guard } from '../../../src';
+import { BasicChainData } from '../../../src/chain/types';
 
 // Create a concrete implementation of the abstract BaseChain for testing
-class TestChain extends BaseChain {
-  public async runChain(request: HttpRequest, context: InvocationContext) {
-    return this.executeChain({ request, context });
+class TestChain extends BaseChain<BasicChainData<HttpRequest>> {
+  public async runChain(triggerData: HttpRequest, context: InvocationContext) {
+    return this.executeChain({ triggerData, context });
   }
 }
 
 describe('BaseChain.useAnyGuard', () => {
   // Mock objects
-  const mockRequest = {} as HttpRequest;
+  const mockTriggerData = {} as HttpRequest;
   let mockContext: InvocationContext;
 
   beforeEach(() => {
@@ -29,7 +30,7 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(failingGuard1, passingGuard, failingGuard2);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeUndefined(); // Chain should pass
@@ -45,7 +46,7 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(failingGuard1, failingGuard2, failingGuard3);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeDefined(); // Chain should fail
@@ -61,7 +62,7 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(failingGuard1, failingGuard2);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeDefined();
@@ -77,7 +78,7 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(passingGuard, secondGuard);
 
       // Act
-      await chain.runChain(mockRequest, mockContext);
+      await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect((passingGuard.check as jest.Mock).mock.calls.length).toBe(1);
@@ -96,11 +97,11 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(guardFn);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeUndefined(); // Chain should pass
-      expect(guardFn).toHaveBeenCalledWith({ request: mockRequest, context: mockContext });
+      expect(guardFn).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
       expect(mockContext.error).not.toHaveBeenCalled();
     });
 
@@ -114,11 +115,11 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(guardFn);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [customFailResponse, false] }));
-      expect(guardFn).toHaveBeenCalledWith({ request: mockRequest, context: mockContext });
+      expect(guardFn).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
       expect(mockContext.error).toHaveBeenCalled();
     });
 
@@ -137,7 +138,7 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(guardFn);
 
       // Act
-      await chain.runChain(mockRequest, mockContext);
+      await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(firstFn).toHaveBeenCalledTimes(1);
@@ -158,7 +159,7 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(failingGuard, passingGuard).useGuard(regularGuard);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toBeUndefined(); // Chain should pass
@@ -175,7 +176,7 @@ describe('BaseChain.useAnyGuard', () => {
       const chain = new TestChain().useAnyGuard(failingGuard1, failingGuard2).useGuard(regularGuard);
 
       // Act
-      const result = await chain.runChain(mockRequest, mockContext);
+      const result = await chain.runChain(mockTriggerData, mockContext);
 
       // Assert
       expect(result).toEqual(funcResult('Forbidden', { message: 'None of the guards in the link passed.', results: [false, false] }));

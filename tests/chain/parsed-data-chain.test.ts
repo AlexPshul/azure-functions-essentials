@@ -1,8 +1,9 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { funcResult, guard, inputFactory, ParsedBodyChain } from '../../src';
+import { funcResult, guard, inputFactory, ParsedDataChain } from '../../src';
+import { BasicChainData } from '../../src/chain/types';
 
-describe('ParsedBodyChain', () => {
+describe('ParsedDataChain', () => {
   // Mock objects
   const mockRequest = {
     url: 'https://www.pshul.com',
@@ -10,6 +11,8 @@ describe('ParsedBodyChain', () => {
   } as unknown as HttpRequest;
 
   let mockContext: InvocationContext;
+
+  const httpAccessor = async (chainData: BasicChainData<HttpRequest>) => (await chainData.triggerData.json()) as Record<string, unknown>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -19,14 +22,14 @@ describe('ParsedBodyChain', () => {
   });
 
   describe('handle with no schema validation', () => {
-    it('should parse body and pass it to handler', async () => {
+    it('should parse data and pass it to handler', async () => {
       // Arrange
       const requestBody = { name: 'Test', age: 30 };
       (mockRequest.json as jest.Mock).mockResolvedValue(requestBody);
 
-      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new ParsedBodyChain(undefined);
+      const chain = new ParsedDataChain(httpAccessor, undefined, 'http');
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -38,19 +41,21 @@ describe('ParsedBodyChain', () => {
       expect(result).toEqual(funcResult('OK', requestBody));
     });
 
-    it('should execute chains with body data available', async () => {
+    it('should execute chains with parsed data available', async () => {
       // Arrange
       const requestBody = { name: 'Test', age: 30 };
       (mockRequest.json as jest.Mock).mockResolvedValue(requestBody);
 
-      // Create a guard that uses the body data
-      // (body.age >= 18 ? true : funcResult('Forbidden', 'Age must be at least 18'))
       const bodyCheckGuardFunc = jest.fn().mockImplementation(body => (body.age >= 18 ? true : funcResult('Forbidden', 'Age must be at least 18')));
       const bodyCheckGuard = (body: typeof requestBody) => guard(() => bodyCheckGuardFunc(body));
 
-      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', `User ${body.name} is ${body.age} years old`));
+      const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', `User ${parsedData.name} is ${parsedData.age} years old`));
 
-      const chain = new ParsedBodyChain<typeof requestBody>(undefined).useGuard(({ body }) => bodyCheckGuard(body));
+      const chain = new ParsedDataChain<HttpRequest, typeof requestBody, 'http'>(
+        httpAccessor as (chainData: BasicChainData<HttpRequest>) => Promise<typeof requestBody>,
+        undefined,
+        'http',
+      ).useGuard(({ parsedData }) => bodyCheckGuard(parsedData));
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -63,7 +68,7 @@ describe('ParsedBodyChain', () => {
   });
 
   describe('handle with schema validation', () => {
-    it('should validate body with static schema', async () => {
+    it('should validate data with static schema', async () => {
       // Arrange
       const requestBody = { name: 'Test', age: 30 };
       (mockRequest.json as jest.Mock).mockResolvedValue(requestBody);
@@ -73,9 +78,9 @@ describe('ParsedBodyChain', () => {
         age: z.number().min(18),
       });
 
-      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new ParsedBodyChain(schema);
+      const chain = new ParsedDataChain(httpAccessor, schema, 'http');
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -87,7 +92,7 @@ describe('ParsedBodyChain', () => {
       expect(result).toEqual(funcResult('OK', requestBody));
     });
 
-    it('should validate body with dynamic schema function', async () => {
+    it('should validate data with dynamic schema function', async () => {
       // Arrange
       const requestBody = { name: 'Test', age: 30 };
       (mockRequest.json as jest.Mock).mockResolvedValue(requestBody);
@@ -99,9 +104,9 @@ describe('ParsedBodyChain', () => {
         }),
       );
 
-      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new ParsedBodyChain(schemaFn);
+      const chain = new ParsedDataChain(httpAccessor, schemaFn, 'http');
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -113,7 +118,7 @@ describe('ParsedBodyChain', () => {
       expect(result).toEqual(funcResult('OK', requestBody));
     });
 
-    it('should return BadRequest when schema validation fails', async () => {
+    it('should return BadRequest when schema validation fails on http chain', async () => {
       // Arrange
       const invalidRequestBody = { name: 'Test', age: 15 }; // Age under 18
       (mockRequest.json as jest.Mock).mockResolvedValue(invalidRequestBody);
@@ -125,7 +130,7 @@ describe('ParsedBodyChain', () => {
 
       const handlerFn = jest.fn();
 
-      const chain = new ParsedBodyChain(schema);
+      const chain = new ParsedDataChain(httpAccessor, schema, 'http');
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -139,6 +144,25 @@ describe('ParsedBodyChain', () => {
       if ('jsonBody' in result)
         expect(result.jsonBody).toBeDefined(); // Should include validation errors
       else fail('Expected result to include a JSON body with validation errors');
+    });
+
+    it('should throw ZodError when schema validation fails on none chain', async () => {
+      // Arrange
+      const invalidData = { name: 'Test', age: 15 };
+      const dataAccessor = async () => invalidData;
+
+      const schema = z.object({
+        name: z.string(),
+        age: z.number().min(18),
+      });
+
+      const handlerFn = jest.fn();
+      const chain = new ParsedDataChain(dataAccessor, schema, 'none');
+
+      // Act & Assert
+      const handler = chain.handle(handlerFn);
+      await expect(handler(undefined as unknown, mockContext)).rejects.toThrow();
+      expect(handlerFn).not.toHaveBeenCalled();
     });
   });
 
@@ -154,14 +178,18 @@ describe('ParsedBodyChain', () => {
       const testInput = inputFactory<string, string>('test', testInputFunc);
       const binding = (str: string) => testInput.create(str);
 
-      const handlerFn = jest.fn().mockImplementation((req, body, ctx) => {
+      const handlerFn = jest.fn().mockImplementation((req, parsedData, ctx) => {
         const inputValue = testInput.get(ctx);
-        return funcResult('OK', { ...body, name: inputValue });
+        return funcResult('OK', { ...parsedData, name: inputValue });
       });
 
-      const chain = new ParsedBodyChain<typeof requestBody>(undefined)
+      const chain = new ParsedDataChain<HttpRequest, typeof requestBody, 'http'>(
+        httpAccessor as (chainData: BasicChainData<HttpRequest>) => Promise<typeof requestBody>,
+        undefined,
+        'http',
+      )
         .useGuard(guard(passingGuardCheck))
-        .useInputBinding(({ body }) => binding(body.name));
+        .useInputBinding(({ parsedData }) => binding(parsedData.name));
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -183,7 +211,7 @@ describe('ParsedBodyChain', () => {
       const failingGuard = guard(() => customResponse);
       const handlerFn = jest.fn();
 
-      const chain = new ParsedBodyChain(undefined).useGuard(failingGuard);
+      const chain = new ParsedDataChain(httpAccessor, undefined, 'http').useGuard(failingGuard);
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -202,7 +230,7 @@ describe('ParsedBodyChain', () => {
 
       const handlerFn = jest.fn().mockResolvedValue(undefined);
 
-      const chain = new ParsedBodyChain(undefined);
+      const chain = new ParsedDataChain(httpAccessor, undefined, 'http');
 
       // Act
       const handler = chain.handle(handlerFn);

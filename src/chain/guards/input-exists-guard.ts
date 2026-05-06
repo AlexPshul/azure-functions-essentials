@@ -1,5 +1,6 @@
 import { FunctionInput } from '@azure/functions';
 import { funcResult } from '../../helpers';
+import { Guard } from '../types';
 import { guard } from './guard';
 
 const notFoundError = (input: string | FunctionInput) => {
@@ -14,8 +15,8 @@ const notFoundError = (input: string | FunctionInput) => {
  * @param failOnEmptyArray - A flag indicating whether to consider an empty array as non-existent.
  * @returns A boolean indicating whether the input exists.
  */
-export const validateInputExistsGuard = (input: string | FunctionInput, failOnEmptyArray = true) =>
-  guard((_, context) => {
+export const validateInputExistsGuard = (input: string | FunctionInput, failOnEmptyArray = true): Guard<unknown> =>
+  guard(({ context }) => {
     const inputResult = context.extraInputs.get(input);
 
     if (inputResult === undefined || inputResult === null) return notFoundError(input);

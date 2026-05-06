@@ -1,5 +1,7 @@
+import { HttpRequest } from '@azure/functions';
 import { funcResult } from '../../helpers';
 import { getHeader } from '../../helpers/get-header';
+import { Guard } from '../types';
 import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
@@ -14,14 +16,14 @@ import { guard } from './guard';
  * // Check if Content-Type header is 'application/json'
  * const jsonContentGuard = headerGuard('Content-Type', 'application/json');
  */
-export const headerGuard = (headerName: string, expectedValue: string) =>
-  guard((req, ctx) => {
+export const headerGuard = (headerName: string, expectedValue: string): Guard<HttpRequest> =>
+  guard<HttpRequest>(({ triggerData, context }) => {
     try {
-      const headerValue = getHeader(req, headerName, true);
+      const headerValue = getHeader(triggerData, headerName, true);
 
       if (headerValue === expectedValue) return true;
 
-      ctx.error(`Header [${headerName}] has unexpected value. Expected: ${expectedValue}, Actual: ${headerValue}`);
+      context.error(`Header [${headerName}] has unexpected value. Expected: ${expectedValue}, Actual: ${headerValue}`);
 
       return DEFAULT_WRONG_HEADER_RESPONSE;
     } catch (error) {

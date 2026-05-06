@@ -3,7 +3,7 @@ import { funcResult, guard } from '../../../src';
 
 describe('guard', () => {
   // Mock objects for HttpRequest and InvocationContext
-  const mockRequest = {} as HttpRequest;
+  const mockTriggerData = {} as HttpRequest;
   const mockContext = new InvocationContext();
 
   beforeEach(() => {
@@ -16,10 +16,10 @@ describe('guard', () => {
 
     // Act
     const testGuard = guard(checkFn);
-    const result = await testGuard.check(mockRequest, mockContext);
+    const result = await testGuard.check({ triggerData: mockTriggerData, context: mockContext });
 
     // Assert
-    expect(checkFn).toHaveBeenCalledWith(mockRequest, mockContext);
+    expect(checkFn).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
     expect(result).toBe(true);
   });
 
@@ -29,10 +29,10 @@ describe('guard', () => {
 
     // Act
     const testGuard = guard(checkFn);
-    const result = await testGuard.check(mockRequest, mockContext);
+    const result = await testGuard.check({ triggerData: mockTriggerData, context: mockContext });
 
     // Assert
-    expect(checkFn).toHaveBeenCalledWith(mockRequest, mockContext);
+    expect(checkFn).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
     expect(result).toBe(false);
   });
 
@@ -43,10 +43,10 @@ describe('guard', () => {
 
     // Act
     const testGuard = guard(checkFn);
-    const result = await testGuard.check(mockRequest, mockContext);
+    const result = await testGuard.check({ triggerData: mockTriggerData, context: mockContext });
 
     // Assert
-    expect(checkFn).toHaveBeenCalledWith(mockRequest, mockContext);
+    expect(checkFn).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
     expect(result).toEqual(customResponse);
   });
 
@@ -56,10 +56,10 @@ describe('guard', () => {
 
     // Act
     const testGuard = guard(checkFn);
-    const result = await testGuard.check(mockRequest, mockContext);
+    const result = await testGuard.check({ triggerData: mockTriggerData, context: mockContext });
 
     // Assert
-    expect(checkFn).toHaveBeenCalledWith(mockRequest, mockContext);
+    expect(checkFn).toHaveBeenCalledWith({ triggerData: mockTriggerData, context: mockContext });
     expect(result).toBe(true);
   });
 });

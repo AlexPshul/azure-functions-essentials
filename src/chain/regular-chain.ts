@@ -1,50 +1,45 @@
-import { FunctionResult, HttpHandler, HttpRequest, InvocationContext } from '@azure/functions';
-import { ZodType } from 'zod';
+import { FunctionResult, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { funcResult } from '../helpers';
 import { BaseChain } from './base-chain';
-import { ParsedBodyChain } from './parsed-body-chain';
-import { BasicChainData, LinkFunctor, SpecificHttpResponseInit } from './types';
+import { ChainGuardError } from './chain-guard-error';
+import { BasicChainData, ResponseType, SpecificHttpResponseInit } from './types';
 
-export type SpecificHttpHandler<TBody> = (
-  request: HttpRequest,
+export type HttpChainHandler<TTriggerData, TBody> = (
+  triggerData: TTriggerData,
   context: InvocationContext,
 ) => FunctionResult<SpecificHttpResponseInit<TBody> | void | undefined>;
 
-export class RegularChain extends BaseChain {
-  /**
-   * Parses the body of the HTTP request using the request.json() call.
-   * After this call, the body will be available in the chain data.
-   *
-   * (!) DO NOT use request.json() if you use this method.
-   *
-   * @param zodType - The Zod schema to use for validating the body object. (Optional)
-   * @returns A variation of the Azure function handler chain that can now access the request body
-   */
-  public parseBody<TBody>(zodType?: ZodType<TBody>): ParsedBodyChain<TBody>;
-  /**
-   * Parses the body of the HTTP request using the request.json() call.
-   * After this call, the body will be available in the chain data.
-   *
-   * (!) DO NOT use request.json() if you use this method.
-   *
-   * @param zodType - A function that returns a Zod schema to use for validating the body object. (Optional)
-   * @returns A variation of the Azure function handler chain that can now access the request body
-   */
-  public parseBody<TBody>(zodType?: LinkFunctor<BasicChainData, ZodType<TBody>>): ParsedBodyChain<TBody>;
-  public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData, ZodType<TBody>>) {
-    const parsedBodyChain = new ParsedBodyChain<TBody>(zodType);
-    return parsedBodyChain.copyFromChain(this, data => data);
-  }
+export type NoneChainHandler<TTriggerData> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<void>;
 
+export class RegularChain<TTriggerData = unknown, TResponseType extends ResponseType = 'none'> extends BaseChain<BasicChainData<TTriggerData>> {
   /**
    * Registers a handler for the Azure function handler chain.
-   * @param handler - The handler function to be executed after the chain is executed. Contains the request, and the context.
-   * @returns A function that satisfies the HttpHandler interface to pass to the Azure function handler property.
+   * @param handler - The handler function to be executed after the chain is executed. Contains the trigger data, and the context.
+   * @returns A function that satisfies the Azure Functions handler interface.
    */
-  public handle<TResultBody = undefined>(handler: SpecificHttpHandler<TResultBody>): HttpHandler {
-    return async (request, context) => {
-      const failedGuardResult = await this.executeChain({ request, context });
-      return failedGuardResult || (await handler(request, context)) || funcResult('OK');
-    };
+  public handle<TResultBody = undefined>(
+    handler: TResponseType extends 'http' ? HttpChainHandler<TTriggerData, TResultBody> : NoneChainHandler<TTriggerData>,
+  ): (triggerData: TTriggerData, context: InvocationContext) => Promise<TResponseType extends 'http' ? HttpResponseInit : void> {
+    return (async (triggerData: TTriggerData, context: InvocationContext) => {
+      const chainData: BasicChainData<TTriggerData> = { triggerData, context };
+      const failedGuardResult = await this.executeChain(chainData);
+
+      if (failedGuardResult) {
+        if (this.isHttpResponse()) return failedGuardResult;
+        throw new ChainGuardError(failedGuardResult, -1, 'guard');
+      }
+
+      const result = await (handler as HttpChainHandler<TTriggerData, TResultBody>)(triggerData, context);
+      if (this.isHttpResponse()) return result || funcResult('OK');
+      return undefined;
+    }) as (triggerData: TTriggerData, context: InvocationContext) => Promise<TResponseType extends 'http' ? HttpResponseInit : void>;
+  }
+
+  protected isHttpResponse(): this is RegularChain<TTriggerData, 'http'> {
+    return (this as RegularChain<TTriggerData, ResponseType>).responseType === 'http';
+  }
+
+  constructor(protected readonly responseType: TResponseType = 'none' as TResponseType) {
+    super();
   }
 }

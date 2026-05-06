@@ -10,9 +10,7 @@ describe('headerFlagGuard', () => {
     mockRequest = new HttpRequest({
       url: 'https://example.com',
       method: 'GET',
-      headers: {
-        // Headers will be set in individual tests
-      },
+      headers: {},
     });
 
     context = new InvocationContext();
@@ -31,7 +29,7 @@ describe('headerFlagGuard', () => {
     const guard = headerFlagGuard('X-Feature-Enabled');
 
     // Act
-    const result = await guard.check(mockRequest, context);
+    const result = await guard.check({ triggerData: mockRequest, context });
 
     // Assert
     expect(result).toBe(true);
@@ -49,7 +47,7 @@ describe('headerFlagGuard', () => {
     const guard = headerFlagGuard('X-Feature-Enabled');
 
     // Act
-    const result = await guard.check(mockRequest, context);
+    const result = await guard.check({ triggerData: mockRequest, context });
 
     // Assert
     expect(result).toBe(true);
@@ -67,7 +65,7 @@ describe('headerFlagGuard', () => {
     const guard = headerFlagGuard('X-Feature-Enabled');
 
     // Act
-    const result = await guard.check(mockRequest, context);
+    const result = await guard.check({ triggerData: mockRequest, context });
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));
@@ -79,7 +77,7 @@ describe('headerFlagGuard', () => {
     const guard = headerFlagGuard('X-Feature-Enabled');
 
     // Act
-    const result = await guard.check(mockRequest, context);
+    const result = await guard.check({ triggerData: mockRequest, context });
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));
@@ -98,7 +96,7 @@ describe('headerFlagGuard', () => {
     const guard = headerFlagGuard('X-Feature-Enabled');
 
     // Act
-    const result = await guard.check(mockRequest, context);
+    const result = await guard.check({ triggerData: mockRequest, context });
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));

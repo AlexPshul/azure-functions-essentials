@@ -9,27 +9,27 @@ const defaultErrors: Record<ChainLink<BasicChainData>['type'], HttpResponseInit>
 };
 
 const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(
-  guards: Guard[] | [LinkFunctor<TChainData, Guard[]>],
-): guards is Guard[] => typeof guards[0] !== 'function';
+  guards: Guard<TChainData['triggerData']>[] | [LinkFunctor<TChainData, Guard<TChainData['triggerData']>[]>],
+): guards is Guard<TChainData['triggerData']>[] => typeof guards[0] !== 'function';
 
 export abstract class BaseChain<TChainData extends BasicChainData = BasicChainData> {
   protected chainLink: ChainLink<TChainData>[] = [];
 
   /**
    * Registers a guard in the execution chain.
-   * The guard is used to check conditions on the request before further processing.
+   * The guard is used to check conditions on the trigger data before further processing.
    * @param guard A guard instance
    * @returns The current chain instance
    */
-  public useGuard(guard: Guard): this;
+  public useGuard(guard: Guard<TChainData['triggerData']>): this;
   /**
    * Registers a guard in the execution chain.
-   * The guard is used to check conditions on the request before further processing.
+   * The guard is used to check conditions on the trigger data before further processing.
    * @param guardFunc A function that returns a guard
    * @returns The current chain instance
    */
-  public useGuard(guardFunc: LinkFunctor<TChainData, Guard>): this;
-  public useGuard(guard: Guard | LinkFunctor<TChainData, Guard>): this {
+  public useGuard(guardFunc: LinkFunctor<TChainData, Guard<TChainData['triggerData']>>): this;
+  public useGuard(guard: Guard<TChainData['triggerData']> | LinkFunctor<TChainData, Guard<TChainData['triggerData']>>): this {
     const guardFunctor = typeof guard === 'function' ? guard : () => guard;
     this.chainLink.push({ type: 'guard', functor: guardFunctor });
     return this;
@@ -40,31 +40,17 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
    * Only **one** of these guards must pass for the entire link to pass.
    * @param guards A list of guards to be used as a single link in the chain.
    * @returns The current chain instance
-   * @example
-   * ```ts
-   * startChain()
-   *  .useAnyGuard(guard1, guard2, guard3) // Only one of these guards must pass
-   *  .useGuard(guard4) // This guard must pass on its own
-   *  .handle(handler);
-   * ```
    */
-  public useAnyGuard(...guards: [Guard, ...Guard[]]): this;
+  public useAnyGuard(...guards: [Guard<TChainData['triggerData']>, ...Guard<TChainData['triggerData']>[]]): this;
   /**
    * Registers a guard link with a list of guards.
    * Only **one** of these guards must pass for the entire link to pass.
    * @param guards A function that returns a list of guards to be used as a single link in the chain.
    * @returns The current chain instance
-   * @example
-   * ```ts
-   * startChain()
-   *  this.useAnyGuard(({ request, context }) => [guard1, guard2]); // Only one of these guards must pass
-   *  .useGuard(guard4) // This guard must pass on its own
-   *  .handle(handler);
-   * ```
    */
-  public useAnyGuard(guardsFunctor: LinkFunctor<TChainData, Guard[]>): this;
-  public useAnyGuard(...guards: Guard[] | [LinkFunctor<TChainData, Guard[]>]) {
-    if (isArrayOfGuards(guards)) this.chainLink.push({ type: 'guard', functor: () => anyGuard(...guards) });
+  public useAnyGuard(guardsFunctor: LinkFunctor<TChainData, Guard<TChainData['triggerData']>[]>): this;
+  public useAnyGuard(...guards: Guard<TChainData['triggerData']>[] | [LinkFunctor<TChainData, Guard<TChainData['triggerData']>[]>]) {
+    if (isArrayOfGuards<TChainData>(guards)) this.chainLink.push({ type: 'guard', functor: () => anyGuard(...guards) });
     else this.chainLink.push({ type: 'guard', functor: data => anyGuard(...guards[0](data)) });
 
     return this;
@@ -73,27 +59,14 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   /**
    * Registers a guard in the execution chain ONLY if the `checkValueExtractor` returns a truthy value.
    * The extracted value is then accessible to the guard function as `checkedValue`.
-   * The guard is used to check conditions on the request before further processing.
+   * The guard is used to check conditions on the trigger data before further processing.
    * @param checkValueExtractor A function that extracts a value from the chain data to check
    * @param guard A guard instance or a function that returns a guard
-   * @example
-   * ```ts
-   * const helloWorldGuard = (value: string) => guardFactory(() => value === 'world');
-   *
-   * startChain()
-   *  .useGuardIf(
-   *    ({ request }) => getQuery(request, 'hello', true),
-   *    ({ checkedValue }) => helloWorldGuard(checkedValue),
-   *  )
-   *  .handle(async () => {
-   *    return funcResult('OK', 'Guarded only if hello is present and checks if world is the value');
-   *  });
-   * ```
    * @returns The current chain instance
    */
   public useGuardIf<TCheckedValue>(
     checkValueExtractor: LinkFunctor<TChainData, TCheckedValue | undefined | null>,
-    guardFunctor: LinkFunctor<TChainData & { checkedValue: TCheckedValue }, Guard>,
+    guardFunctor: LinkFunctor<TChainData & { checkedValue: TCheckedValue }, Guard<TChainData['triggerData']>>,
   ): this {
     this.chainLink.push({
       type: 'guard',
@@ -134,7 +107,6 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
    */
   public copyFromChain<TSourceData extends BasicChainData>(sourceChain: BaseChain<TSourceData>, mapFunc: (data: TChainData) => TSourceData) {
     const alteredSource = sourceChain.chainLink.map(link => {
-      // This switch case is to keep the same typing scheme for the resulted chain
       switch (link.type) {
         case 'guard':
           return { ...link, functor: (data: TChainData) => link.functor(mapFunc(data)) };
@@ -148,13 +120,13 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   }
 
   protected async executeChain(chainData: TChainData) {
-    const { request, context } = chainData;
+    const { context } = chainData;
     for (const [index, link] of this.chainLink.entries()) {
       try {
         let linkResult: ChainLinkResult;
         switch (link.type) {
           case 'guard':
-            linkResult = await link.functor(chainData).check(request, context);
+            linkResult = await link.functor(chainData).check(chainData);
             break;
           case 'inputBinding':
             linkResult = await link.functor(chainData).set(context);
@@ -163,12 +135,12 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
 
         if (linkResult !== true) {
           const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
-          context.error(`Link #${index} stopped the chain. Url: ${request.url} | Result: ${JSON.stringify(linkError)}`);
+          context.error(`Link #${index} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
           return linkError;
         }
       } catch (error) {
         const linkError = defaultErrors[link.type];
-        context.error(`Link #${index} failed. Url: ${request.url} | Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`);
+        context.error(`Link #${index} (${link.type}) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`);
         return linkError;
       }
     }

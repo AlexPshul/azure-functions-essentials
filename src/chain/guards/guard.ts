@@ -6,7 +6,7 @@ import { Guard } from '../types';
  *
  * If the check fails, it should return a HttpResponseInit object or false.
  * If the check passes, return true.
- * @param check - The guard check function to check the request and/or the context of the function
+ * @param check - The guard check function to check conditions on the trigger data and/or the context
  * @returns A guard instance
  */
-export const guard = (check: Guard['check']): Guard => ({ check });
+export const guard = <T = unknown>(check: Guard<T>['check']): Guard<T> => ({ check });

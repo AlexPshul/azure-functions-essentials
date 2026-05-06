@@ -1,4 +1,6 @@
+import { HttpRequest } from '@azure/functions';
 import { getHeaderArray } from '../../helpers';
+import { Guard } from '../types';
 import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
@@ -9,9 +11,9 @@ import { guard } from './guard';
  * @param separator - The separator used to split the header values
  * @returns A guard function that validates the presence of values in the header
  */
-export const allValuesHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard((req, context) => {
-    const headerArray = getHeaderArray(req, header, separator);
+export const allValuesHeaderGuard = (header: string, values: string[], separator = ','): Guard<HttpRequest> =>
+  guard<HttpRequest>(({ triggerData, context }) => {
+    const headerArray = getHeaderArray(triggerData, header, separator);
 
     if (values.every(value => headerArray.includes(value))) return true;
 
@@ -26,9 +28,9 @@ export const allValuesHeaderGuard = (header: string, values: string[], separator
  * @param separator - The separator used to split the header values
  * @returns A guard function that validates the presence of values in the header
  */
-export const exactValuesHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard((req, context) => {
-    const headerArray = getHeaderArray(req, header, separator);
+export const exactValuesHeaderGuard = (header: string, values: string[], separator = ','): Guard<HttpRequest> =>
+  guard<HttpRequest>(({ triggerData, context }) => {
+    const headerArray = getHeaderArray(triggerData, header, separator);
 
     if (headerArray.length === values.length && values.every(value => headerArray.includes(value))) return true;
 
@@ -43,9 +45,9 @@ export const exactValuesHeaderGuard = (header: string, values: string[], separat
  * @param separator - The separator used to split the header values
  * @return A guard function that validates the presence of values in the header
  * */
-export const atLeastOneHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard((req, context) => {
-    const headerArray = getHeaderArray(req, header, separator);
+export const atLeastOneHeaderGuard = (header: string, values: string[], separator = ','): Guard<HttpRequest> =>
+  guard<HttpRequest>(({ triggerData, context }) => {
+    const headerArray = getHeaderArray(triggerData, header, separator);
 
     if (values.some(value => headerArray.includes(value))) return true;
 

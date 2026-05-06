@@ -27,26 +27,28 @@ Chain your function logic like a boss.
 Found a guard or an input that should be reused in other functions?
 Declare as a const and reuse the logic!
 
+Chains support **any Azure Functions trigger type** — HTTP, Service Bus, Timer, Event Hub, MCP tools, and more.
+
 ```typescript
-import { startChain, guard, funcResult, inputFactory } from 'azure-functions-essentials';
+import { startHttpChain, guard, funcResult, inputFactory } from 'azure-functions-essentials';
 
 // Create an input binding for user lookup with your fancy database call
 const userLookup = inputFactory<string, User>('user', userId => getUserFromDatabase(userId));
 
 // Make sure they have the magic password
-const keyGuard = guard(req => req.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nice try, hacker!'));
+const keyGuard = guard(({ triggerData }) => triggerData.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nice try, hacker!'));
 
 // Make sure the user is a ninja (Guard functor pattern)
 const ninjaGuard = (user: User) => guard(() => user.isNinja || funcResult('Forbidden', 'Only 🥷s are allowed!'));
 
 app.post('super-secret-endpoint', {
-  handler: startChain()
+  handler: startHttpChain()
     .useGuard(keyGuard) // Use a guard (or several?)
     .parseBody(myZodSchema) // Parse the body and (optionally) validate with Zod
-    .useInputBinding(({ body }) => userLookup.create(body.user.id)) // Initialize the input
+    .useInputBinding(({ parsedData }) => userLookup.create(parsedData.user.id)) // Initialize the input
     .useGuard(({ context }) => ninjaGuard(userLookup.get(context))) // Use input results in the chain
     // Handle the request with all goodies available
-    .handle((req, body, ctx) => {
+    .handle((triggerData, parsedData, ctx) => {
       const user = userLookup.get(ctx); // Get the user from our input
 
       // Your incredibly important business logic here
@@ -55,10 +57,38 @@ app.post('super-secret-endpoint', {
       return funcResult('OK', {
         message: `You're in ${user.name}! Here's your cookie 🍪`,
         userData: user,
-        requestData: body,
+        requestData: parsedData,
       });
     }),
 });
+```
+
+#### Non-HTTP Chains
+
+```typescript
+import { startMessageChain, startTimerChain, startMcpChain } from 'azure-functions-essentials';
+import { z } from 'zod';
+
+// Service Bus with Zod validation — throws ZodError if invalid
+const messageSchema = z.object({ orderId: z.string(), amount: z.number() });
+const messageHandler = startMessageChain(messageSchema)
+  .handle((triggerData, context) => {
+    // triggerData is typed as { orderId: string, amount: number }
+    context.log(`Processing order ${triggerData.orderId}`);
+  });
+
+// Timer trigger
+const timerHandler = startTimerChain()
+  .handle((triggerData, context) => {
+    context.log(`Timer fired: ${triggerData.isPastDue}`);
+  });
+
+// MCP tool trigger with parsed arguments
+const mcpHandler = startMcpChain()
+  .parseArgs(myArgsSchema)
+  .handle((triggerData, parsedData, context) => {
+    return funcResult('OK', { result: 'Tool executed' });
+  });
 ```
 
 ### 🛡️ Guards
@@ -68,8 +98,8 @@ app.post('super-secret-endpoint', {
 Keep the bad guys out:
 
 ```typescript
-const isAdminGuard = guard((req, ctx) => {
-  const user = ctx.extraInputs.get('user');
+const isAdminGuard = guard(({ context }) => {
+  const user = context.extraInputs.get('user');
   return user.role === 'admin' || funcResult('Forbidden', 'You shall not pass! 🧙‍♂️');
 });
 ```
@@ -85,7 +115,7 @@ const userLookup = inputFactory<string, User>('user', async userId => {
 });
 
 // Later in your chain...
-.useInputBinding(({ request }) => userLookup.create(request.params.userId))
+.useInputBinding(({ triggerData }) => userLookup.create(triggerData.params.userId))
 ```
 
 ### 🌊 HTTP Streaming
@@ -187,15 +217,15 @@ Guards can directly check headers, query parameters, or any request property:
 
 ```typescript
 // Simple header-based authentication guard
-const apiKeyGuard = guard((req, ctx) => {
-  const apiKey = req.headers.get('x-api-key');
+const apiKeyGuard = guard<HttpRequest>(({ triggerData, context }) => {
+  const apiKey = triggerData.headers.get('x-api-key');
   return apiKey === process.env.API_KEY || funcResult('Unauthorized', 'Invalid API key');
 });
 
 // Usage in chain
-startChain()
+startHttpChain()
   .useGuard(apiKeyGuard)
-  .handle((req, ctx) => {
+  .handle((triggerData, ctx) => {
     // Only executed if API key is valid
     return funcResult('OK', 'Access granted!');
   });
@@ -209,15 +239,15 @@ Guards can also be created on-the-fly with the functor pattern, allowing you to 
 type BodyType = { name: string; age: number };
 
 // Guard factory that validates a specific property in the body
-const validateBody = (body: BodyType) => guard((req, ctx) => body.age < 18 || funcResult('BadRequest', `Age must be at least 18 years old`));
+const validateBody = (parsedData: BodyType) => guard(() => parsedData.age >= 18 || funcResult('BadRequest', `Age must be at least 18 years old`));
 
 // Usage with parsed body
-startChain()
+startHttpChain()
   .parseBody<BodyType>()
-  .useGuard(({ body }) => validateBody(body)) // Pass the body to validateBody
-  .handle((req, body, ctx) => {
+  .useGuard(({ parsedData }) => validateBody(parsedData)) // Pass the parsed data to validateBody
+  .handle((triggerData, parsedData, ctx) => {
     // Only executed if the body validator is passed
-    return funcResult('OK', `Welcome, ${body.name}!`);
+    return funcResult('OK', `Welcome, ${parsedData.name}!`);
   });
 ```
 
@@ -239,10 +269,10 @@ const userSchema = z.object({
   age: z.number().min(18).optional(),
 });
 
-startChain()
+startHttpChain()
   .parseBody(userSchema)
-  .handle((req, body, ctx) => {
-    // body is typed and validated!
+  .handle((triggerData, parsedData, ctx) => {
+    // parsedData is typed and validated!
   });
 ```
 

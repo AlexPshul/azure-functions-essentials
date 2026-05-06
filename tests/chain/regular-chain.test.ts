@@ -1,8 +1,8 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { funcResult, guard, inputFactory, RegularChain } from '../../src';
+import { funcResult, guard, inputFactory, HttpChain } from '../../src';
 
-describe('RegularChain', () => {
+describe('HttpChain (formerly RegularChain HTTP behavior)', () => {
   // Mock objects
   const mockRequest = {
     url: 'https://www.pshul.com',
@@ -27,7 +27,7 @@ describe('RegularChain', () => {
       const binding = testInput.create('test-data');
       const handlerFn = jest.fn().mockResolvedValue(funcResult('OK', 'Success'));
 
-      const chain = new RegularChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
+      const chain = new HttpChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -36,7 +36,7 @@ describe('RegularChain', () => {
       // Assert
       expect(handlerFn).toHaveBeenCalledWith(mockRequest, mockContext);
       expect(result).toEqual(funcResult('OK', 'Success'));
-      expect(passingGuardCheck).toHaveBeenCalledWith(mockRequest, mockContext);
+      expect(passingGuardCheck).toHaveBeenCalledWith({ triggerData: mockRequest, context: mockContext });
       expect(testInputFunc).toHaveBeenCalledWith('test-data');
     });
 
@@ -46,7 +46,7 @@ describe('RegularChain', () => {
       const failingGuard = guard(() => customResponse);
       const handlerFn = jest.fn().mockResolvedValue(funcResult('OK', 'Success'));
 
-      const chain = new RegularChain().useGuard(failingGuard);
+      const chain = new HttpChain().useGuard(failingGuard);
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -63,7 +63,7 @@ describe('RegularChain', () => {
       const passingGuard = guard(() => true);
       const handlerFn = jest.fn().mockResolvedValue(undefined);
 
-      const chain = new RegularChain().useGuard(passingGuard);
+      const chain = new HttpChain().useGuard(passingGuard);
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -76,7 +76,7 @@ describe('RegularChain', () => {
   });
 
   describe('parseBody', () => {
-    it('should return a ParsedBodyChain that transfers chain links', async () => {
+    it('should return a ParsedDataChain that transfers chain links', async () => {
       // Arrange
       const requestBody = { name: 'Test', age: 30 };
       (mockRequest.json as jest.Mock).mockResolvedValue(requestBody);
@@ -84,9 +84,9 @@ describe('RegularChain', () => {
       const passingGuardCheck = jest.fn(() => true);
       const testInput = inputFactory<string, string>('test', async data => data.toUpperCase());
       const binding = testInput.create('test-data');
-      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new RegularChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
+      const chain = new HttpChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
 
       // Act
       const parsedChain = chain.parseBody();
@@ -98,7 +98,7 @@ describe('RegularChain', () => {
       expect(handlerFn).toHaveBeenCalled();
       expect(result).toEqual(funcResult('OK', requestBody));
       expect(testInput.get(mockContext)).toBe('TEST-DATA');
-      expect(passingGuardCheck).toHaveBeenCalledWith(mockRequest, mockContext);
+      expect(passingGuardCheck).toHaveBeenCalledWith({ triggerData: mockRequest, context: mockContext, parsedData: requestBody });
     });
 
     it('should validate body with Zod schema if provided', async () => {
@@ -108,9 +108,9 @@ describe('RegularChain', () => {
 
       const schema = z.object({ name: z.string(), age: z.number().min(18) });
 
-      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new RegularChain();
+      const chain = new HttpChain();
 
       // Act
       const parsedChain = chain.parseBody(schema);
@@ -131,7 +131,7 @@ describe('RegularChain', () => {
 
       const handlerFn = jest.fn();
 
-      const chain = new RegularChain();
+      const chain = new HttpChain();
 
       // Act
       const parsedChain = chain.parseBody(schema);
@@ -151,9 +151,9 @@ describe('RegularChain', () => {
 
       const schemaFn = jest.fn(() => z.object({ name: z.string(), age: z.number().min(18) }));
 
-      const handlerFn = jest.fn().mockImplementation((req, body) => funcResult('OK', body));
+      const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new RegularChain();
+      const chain = new HttpChain();
 
       // Act
       const parsedChain = chain.parseBody(schemaFn);
