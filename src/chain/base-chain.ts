@@ -1,7 +1,8 @@
 import { HttpResponseInit } from '@azure/functions';
 import { funcResult } from '../helpers';
+import { ChainGuardError } from './chain-guard-error';
 import { anyGuard, guard as guardFactory } from './guards';
-import { BasicChainData, ChainLink, ChainLinkResult, Guard, InputBindingSetter, LinkFunctor } from './types';
+import { BasicChainData, ChainLink, ChainLinkResult, ChainOptions, Guard, InputBindingSetter, LinkFunctor, ResponseType } from './types';
 
 export type ChainFailure = {
   result: HttpResponseInit;
@@ -18,8 +19,14 @@ const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(
   guards: Guard<TChainData['triggerData']>[] | [LinkFunctor<TChainData, Guard<TChainData['triggerData']>[]>],
 ): guards is Guard<TChainData['triggerData']>[] => typeof guards[0] !== 'function';
 
-export abstract class BaseChain<TChainData extends BasicChainData = BasicChainData> {
+export abstract class BaseChain<TChainData extends BasicChainData = BasicChainData, TResponseType extends ResponseType = ResponseType> {
   protected chainLink: ChainLink<TChainData>[] = [];
+
+  constructor(protected readonly options: ChainOptions<TResponseType> = { responseType: 'none' as TResponseType }) {}
+
+  protected get responseType(): TResponseType {
+    return this.options.responseType;
+  }
 
   /**
    * Registers a guard in the execution chain.
@@ -152,5 +159,28 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
     }
 
     return undefined;
+  }
+
+  protected handleFailure(failure: ChainFailure) {
+    const guardError = new ChainGuardError(failure.result, failure.linkIndex, failure.linkType);
+    switch (this.responseType) {
+      case 'http':
+        return failure.result;
+      case 'json':
+        return guardError;
+      case 'none':
+        throw guardError;
+    }
+  }
+
+  protected handleResult<TResult>(result: TResult) {
+    switch (this.responseType) {
+      case 'http':
+        return result || funcResult('OK');
+      case 'json':
+        return result;
+      case 'none':
+        return undefined;
+    }
   }
 }

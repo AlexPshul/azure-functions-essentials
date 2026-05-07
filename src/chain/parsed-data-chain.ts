@@ -2,7 +2,6 @@ import { FunctionResult, InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
 import { BaseChain } from './base-chain';
-import { ChainGuardError } from './chain-guard-error';
 import { ChainResultFor } from './regular-chain';
 import { BasicChainData, ChainOptions, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
 
@@ -33,18 +32,15 @@ type ParsedChainData<TTriggerData, TData> = BasicChainData<TTriggerData> & { par
  * The handler receives three arguments: (triggerData, parsedData, context).
  */
 export class ParsedDataChain<TTriggerData, TData, TResponseType extends ResponseType = 'http'> extends BaseChain<
-  ParsedChainData<TTriggerData, TData>
+  ParsedChainData<TTriggerData, TData>,
+  TResponseType
 > {
   constructor(
     private readonly dataAccessor: (chainData: BasicChainData<TTriggerData>) => Promise<TData>,
     private readonly zodType: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>> | undefined,
-    private readonly options: ChainOptions<TResponseType> = { responseType: 'http' as TResponseType },
+    options: ChainOptions<TResponseType> = { responseType: 'http' as TResponseType },
   ) {
-    super();
-  }
-
-  private get responseType(): TResponseType {
-    return this.options.responseType;
+    super(options);
   }
 
   /**
@@ -79,28 +75,10 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
 
       const chainData: ParsedChainData<TTriggerData, TData> = { triggerData, context, parsedData };
       const failure = await this.executeChain(chainData);
-
-      if (failure) {
-        const guardError = new ChainGuardError(failure.result, failure.linkIndex, failure.linkType);
-        switch (this.responseType) {
-          case 'http':
-            return failure.result;
-          case 'json':
-            return guardError;
-          case 'none':
-            throw guardError;
-        }
-      }
+      if (failure) return this.handleFailure(failure);
 
       const result = await (handler as HttpParsedHandler<TTriggerData, TData, TResultBody>)(triggerData, parsedData, context);
-      switch (this.responseType) {
-        case 'http':
-          return result || funcResult('OK');
-        case 'json':
-          return result;
-        case 'none':
-          return undefined;
-      }
+      return this.handleResult(result);
     }) as (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>>;
   }
 }
