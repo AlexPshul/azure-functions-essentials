@@ -9,4 +9,4 @@ import { Guard } from '../types';
  * @param check - The guard check function to check conditions on the trigger data and/or the context
  * @returns A guard instance
  */
-export const guard = <T = unknown>(check: Guard<T>['check']) => ({ check });
+export const guard = <T = unknown>(check: Guard<T>['check']): Guard<T> => ({ check });

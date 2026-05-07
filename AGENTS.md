@@ -7,7 +7,7 @@ If the user asks to save something as a coding style rule, update this section.
 - TypeScript only. No `.js` files in `src/`.
 - Prefer `const` over `let`. Never use `var`.
 - Omit default type parameters when they match the default (e.g., `Guard` not `Guard<unknown>`).
-- Prefer implicit return types — only annotate return types when TypeScript cannot infer them correctly.
+- Prefer implicit return types — only annotate return types when TypeScript cannot infer them correctly or when the inferred type is structural (e.g., `{ check }`) rather than a named domain type (e.g., `Guard<T>`). If the function already returns a named type through its implementation (e.g., calling `guard(...)` which returns `Guard`), omit the annotation.
 - Use `type` for type aliases, not `interface`, unless extending is needed.
 - Export from barrel `index.ts` files — every public module must be re-exported.
 - Only comment code that needs a bit of clarification. Do not comment otherwise.
