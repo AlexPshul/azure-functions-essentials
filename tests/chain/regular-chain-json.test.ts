@@ -1,5 +1,5 @@
 import { InvocationContext } from '@azure/functions';
-import { RegularChain, ChainGuardError, guard, funcResult } from '../../src';
+import { RegularChain, ChainFailure, guard, funcResult } from '../../src';
 
 describe('RegularChain with responseType json', () => {
   let mockContext: InvocationContext;
@@ -22,7 +22,7 @@ describe('RegularChain with responseType json', () => {
     expect(result).toEqual({ result: 'success' });
   });
 
-  it('should return ChainGuardError when guard fails', async () => {
+  it('should return ChainFailure when guard fails', async () => {
     const triggerData = { message: 'hello' };
     const failingGuard = guard(() => false);
     const handlerFn = jest.fn();
@@ -31,11 +31,12 @@ describe('RegularChain with responseType json', () => {
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
-    expect(result).toBeInstanceOf(ChainGuardError);
+    expect(result).toHaveProperty('linkType', 'guard');
+    expect(result).toHaveProperty('linkIndex', 0);
     expect(handlerFn).not.toHaveBeenCalled();
   });
 
-  it('should return ChainGuardError with custom response when guard returns HttpResponseInit', async () => {
+  it('should return ChainFailure with custom response when guard returns HttpResponseInit', async () => {
     const triggerData = { message: 'hello' };
     const customResponse = funcResult('Forbidden', 'Not allowed');
     const failingGuard = guard(() => customResponse);
@@ -45,8 +46,8 @@ describe('RegularChain with responseType json', () => {
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
-    expect(result).toBeInstanceOf(ChainGuardError);
-    expect((result as ChainGuardError).guardResult).toEqual(customResponse);
+    expect((result as ChainFailure).result).toEqual(customResponse);
+    expect((result as ChainFailure).linkType).toBe('guard');
   });
 
   it('should return handler result directly without wrapping', async () => {
@@ -83,7 +84,7 @@ describe('RegularChain with responseType json', () => {
     expect(guardCheck).toHaveBeenCalledWith({ triggerData, context: mockContext });
   });
 
-  it('should serialize ChainGuardError to JSON with toJSON', async () => {
+  it('should serialize ChainFailure to JSON', async () => {
     const triggerData = { message: 'hello' };
     const customResponse = funcResult('Forbidden', 'Access denied');
     const failingGuard = guard(() => customResponse);
@@ -94,8 +95,7 @@ describe('RegularChain with responseType json', () => {
     const result = await handler(triggerData, mockContext);
 
     const serialized = JSON.parse(JSON.stringify(result));
-    expect(serialized.error).toBe('ChainGuardError');
-    expect(serialized.guardResult).toEqual(customResponse);
+    expect(serialized.result).toEqual(customResponse);
     expect(serialized.linkType).toBe('guard');
     expect(serialized.linkIndex).toBe(0);
   });

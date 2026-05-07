@@ -1,7 +1,7 @@
 import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
-import { ChainHandlerFor, ChainWrapper, RegularChain } from '../regular-chain';
-import { ChainOptions, ResponseType } from '../types';
+import { RegularChain } from '../regular-chain';
+import { ChainHandlerFor, ChainOptions, ChainWrapper, ResponseType } from '../types';
 
 /**
  * A chain that validates raw trigger data against a Zod schema before running guards or the handler.

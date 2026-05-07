@@ -2,8 +2,7 @@ import { FunctionResult, InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
 import { BaseChain } from './base-chain';
-import { ChainWrapper } from './regular-chain';
-import { BasicChainData, ChainOptions, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
+import { BasicChainData, ChainOptions, ChainWrapper, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
 
 type HttpParsedHandler<TTriggerData, TData, TResultBody> = (
   triggerData: TTriggerData,

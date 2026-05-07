@@ -1,5 +1,5 @@
 import { InvocationContext } from '@azure/functions';
-import { RegularChain, ChainGuardError, guard, funcResult } from '../../src';
+import { RegularChain, guard } from '../../src';
 
 describe('RegularChain with responseType none', () => {
   let mockContext: InvocationContext;
@@ -21,7 +21,7 @@ describe('RegularChain with responseType none', () => {
     expect(handlerFn).toHaveBeenCalledWith(triggerData, mockContext);
   });
 
-  it('should throw ChainGuardError when guard fails', async () => {
+  it('should throw Error when guard fails', async () => {
     const triggerData = { message: 'hello' };
     const failingGuard = guard(() => false);
     const handlerFn = jest.fn();
@@ -29,26 +29,19 @@ describe('RegularChain with responseType none', () => {
     const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
 
-    await expect(handler(triggerData, mockContext)).rejects.toThrow(ChainGuardError);
+    await expect(handler(triggerData, mockContext)).rejects.toThrow(Error);
     expect(handlerFn).not.toHaveBeenCalled();
   });
 
-  it('should throw ChainGuardError with custom response when guard returns HttpResponseInit', async () => {
+  it('should throw Error with descriptive message when guard fails', async () => {
     const triggerData = { message: 'hello' };
-    const customResponse = funcResult('Forbidden', 'Not allowed');
-    const failingGuard = guard(() => customResponse);
+    const failingGuard = guard(() => false);
     const handlerFn = jest.fn();
 
     const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
 
-    try {
-      await handler(triggerData, mockContext);
-      fail('Should have thrown');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ChainGuardError);
-      expect((error as ChainGuardError).guardResult).toEqual(customResponse);
-    }
+    await expect(handler(triggerData, mockContext)).rejects.toThrow('Chain guard #0 failed.');
   });
 
   it('should return void when handler completes successfully', async () => {

@@ -1,6 +1,5 @@
 export * from './base-chain';
 export * from './chain';
-export * from './chain-guard-error';
 export * from './guards';
 export * from './input-factory';
 export * from './parsed-data-chain';

@@ -1,6 +1,6 @@
 import { InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { startMcpChain, ChainGuardError, guard, funcResult } from '../../src';
+import { startMcpChain, ChainFailure, guard, funcResult } from '../../src';
 
 describe('startMcpChain', () => {
   let mockContext: InvocationContext;
@@ -55,7 +55,7 @@ describe('startMcpChain', () => {
     expect(handlerFn).not.toHaveBeenCalled();
   });
 
-  it('should return ChainGuardError when guard fails', async () => {
+  it('should return ChainFailure when guard fails', async () => {
     const args = { name: 'test' };
     const context = createMcpContext(args);
     const failingGuard = guard(() => false);
@@ -64,11 +64,11 @@ describe('startMcpChain', () => {
     const handler = startMcpChain<typeof args>().useGuard(failingGuard).handle(handlerFn);
     const result = await handler(undefined as unknown, context);
 
-    expect(result).toBeInstanceOf(ChainGuardError);
+    expect(result).toHaveProperty('linkType', 'guard');
     expect(handlerFn).not.toHaveBeenCalled();
   });
 
-  it('should return ChainGuardError with custom response when guard returns HttpResponseInit', async () => {
+  it('should return ChainFailure with custom response when guard returns HttpResponseInit', async () => {
     const args = { name: 'test' };
     const context = createMcpContext(args);
     const customResponse = funcResult('Forbidden', 'Not authorized');
@@ -78,8 +78,7 @@ describe('startMcpChain', () => {
     const handler = startMcpChain<typeof args>().useGuard(failingGuard).handle(handlerFn);
     const result = await handler(undefined as unknown, context);
 
-    expect(result).toBeInstanceOf(ChainGuardError);
-    expect((result as ChainGuardError).guardResult).toEqual(customResponse);
+    expect((result as ChainFailure).result).toEqual(customResponse);
   });
 
   it('should return handler result as JSON passthrough', async () => {
@@ -119,7 +118,7 @@ describe('startMcpChain', () => {
     const result = await handler(undefined as unknown, context);
 
     const serialized = JSON.parse(JSON.stringify(result));
-    expect(serialized.error).toBe('ChainGuardError');
-    expect(serialized.message).toContain('guard');
+    expect(serialized.result).toBeDefined();
+    expect(serialized.linkType).toBe('guard');
   });
 });

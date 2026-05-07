@@ -1,33 +1,6 @@
-import { FunctionResult, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { InvocationContext } from '@azure/functions';
 import { BaseChain } from './base-chain';
-import { ChainGuardError } from './chain-guard-error';
-import { BasicChainData, ResponseType, SpecificHttpResponseInit } from './types';
-
-export type HttpChainHandler<TTriggerData, TBody> = (
-  triggerData: TTriggerData,
-  context: InvocationContext,
-) => FunctionResult<SpecificHttpResponseInit<TBody> | void | undefined>;
-
-export type JsonChainHandler<TTriggerData, TResultBody> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<TResultBody>;
-
-export type NoneChainHandler<TTriggerData> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<void>;
-
-export type ChainHandlerFor<TResponseType extends ResponseType, TTriggerData, TResultBody> = TResponseType extends 'http'
-  ? HttpChainHandler<TTriggerData, TResultBody>
-  : TResponseType extends 'json'
-    ? JsonChainHandler<TTriggerData, TResultBody>
-    : NoneChainHandler<TTriggerData>;
-
-export type ChainResultFor<TResponseType extends ResponseType, TResultBody = undefined> = TResponseType extends 'http'
-  ? HttpResponseInit
-  : TResponseType extends 'json'
-    ? TResultBody | ChainGuardError
-    : void;
-
-export type ChainWrapper<TTriggerData, TResponseType extends ResponseType, TResultBody = undefined> = (
-  triggerData: TTriggerData,
-  context: InvocationContext,
-) => Promise<ChainResultFor<TResponseType, TResultBody>>;
+import { BasicChainData, ChainHandlerFor, ChainWrapper, ResponseType } from './types';
 
 export class RegularChain<TTriggerData = unknown, TResponseType extends ResponseType = 'none'> extends BaseChain<
   BasicChainData<TTriggerData>,

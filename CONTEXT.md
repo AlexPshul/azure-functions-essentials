@@ -23,11 +23,11 @@ Data extracted or transformed from trigger data via a data accessor function. Di
 _Avoid_: Body (except on `HttpChain.parseBody()` where it's domain-accurate)
 
 **ResponseType**:
-A `'http' | 'json' | 'none'` discriminator on a chain that controls two behaviors: (1) what the handler returns — `HttpResponseInit`, arbitrary JSON, or `void`, and (2) how guard failures are handled — returned as HTTP responses, returned as `ChainGuardError` objects, or thrown as `ChainGuardError`.
+A `'http' | 'json' | 'none'` discriminator on a chain that controls two behaviors: (1) what the handler returns — `HttpResponseInit`, arbitrary JSON, or `void`, and (2) how guard failures are handled — returned as HTTP responses, returned as `ChainFailure` objects, or thrown as errors.
 _Avoid_: ErrorMode, returnType
 
-**ChainGuardError**:
-A structured error for guard/input-binding failures on non-HTTP chains. Thrown on `responseType: 'none'` chains, returned as a serializable value on `responseType: 'json'` chains. Includes `toJSON()` for clean serialization.
+**ChainFailure**:
+A structured object describing a guard or input-binding failure. Contains the HTTP result, link index, and link type. Returned as a value on `'json'` chains, used to construct the thrown `Error` message on `'none'` chains.
 
 **InputBinding**:
 A chain link that fetches and stores data in the invocation context before the handler runs.
@@ -49,12 +49,12 @@ A chain that extracts parsed data from trigger data using a configurable data ac
 - A **Guard** is generic over **TriggerData** — `Guard<unknown>` is usable on any chain
 - An **HttpChain** can produce a **ParsedDataChain** via `parseBody()`
 - A **ValidatedChain** validates **TriggerData** against a Zod schema before the chain runs
-- **ResponseType** determines whether guard failures produce HTTP responses, returned **ChainGuardErrors**, or thrown **ChainGuardErrors**
+- **ResponseType** determines whether guard failures produce HTTP responses, returned **ChainFailures**, or thrown errors
 
 ## Example dialogue
 
 > **Dev:** "When a Service Bus message arrives, how does the chain handle a guard failure?"
-> **Domain expert:** "It throws a **ChainGuardError** because the chain's **ResponseType** is `'none'` — there's no HTTP response to return."
+> **Domain expert:** "It throws an `Error` because the chain's **ResponseType** is `'none'` — there's no HTTP response to return."
 
 > **Dev:** "Can I use a header guard on a timer chain?"
 > **Domain expert:** "No — `headerGuard` returns a `Guard<HttpRequest>`, and a timer chain expects `Guard<Timer>`. TypeScript will catch that at compile time."

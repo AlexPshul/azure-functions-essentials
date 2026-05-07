@@ -1,14 +1,7 @@
 import { HttpResponseInit } from '@azure/functions';
 import { funcResult } from '../helpers';
-import { ChainGuardError } from './chain-guard-error';
 import { anyGuard, guard as guardFactory } from './guards';
-import { BasicChainData, ChainLink, ChainLinkResult, ChainOptions, Guard, InputBindingSetter, LinkFunctor, ResponseType } from './types';
-
-export type ChainFailure = {
-  result: HttpResponseInit;
-  linkIndex: number;
-  linkType: 'guard' | 'inputBinding';
-};
+import { BasicChainData, ChainFailure, ChainLink, ChainLinkResult, ChainOptions, Guard, InputBindingSetter, LinkFunctor, ResponseType } from './types';
 
 const defaultErrors: Record<ChainLink<BasicChainData>['type'], HttpResponseInit> = {
   guard: funcResult('Forbidden', "I'm sorry, kiddo. I really am."),
@@ -162,14 +155,13 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   }
 
   protected handleFailure(failure: ChainFailure) {
-    const guardError = new ChainGuardError(failure.result, failure.linkIndex, failure.linkType);
     switch (this.responseType) {
       case 'http':
         return failure.result;
       case 'json':
-        return guardError;
+        return failure;
       case 'none':
-        throw guardError;
+        throw new Error(`Chain ${failure.linkType} #${failure.linkIndex} failed.`);
     }
   }
 
