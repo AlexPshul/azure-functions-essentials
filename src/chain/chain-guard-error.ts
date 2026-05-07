@@ -1,8 +1,8 @@
 import { HttpResponseInit } from '@azure/functions';
 
 /**
- * Error thrown when a guard fails on a chain with `responseType: 'none'`.
- * Carries structured information about the failure.
+ * Structured error for guard/input-binding failures on non-HTTP chains.
+ * Thrown on `responseType: 'none'` chains, returned as a value on `responseType: 'json'` chains.
  */
 export class ChainGuardError extends Error {
   constructor(
@@ -12,5 +12,15 @@ export class ChainGuardError extends Error {
   ) {
     super(`Chain ${linkType} #${linkIndex} failed.`);
     this.name = 'ChainGuardError';
+  }
+
+  toJSON() {
+    return {
+      error: this.name,
+      message: this.message,
+      guardResult: this.guardResult,
+      linkIndex: this.linkIndex,
+      linkType: this.linkType,
+    };
   }
 }

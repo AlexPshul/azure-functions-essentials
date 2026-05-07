@@ -1,8 +1,9 @@
-import { FunctionResult, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { FunctionResult, InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
 import { BaseChain } from './base-chain';
 import { ChainGuardError } from './chain-guard-error';
+import { ChainResultFor } from './regular-chain';
 import { BasicChainData, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
 
 type HttpParsedHandler<TTriggerData, TData, TResultBody> = (
@@ -11,7 +12,19 @@ type HttpParsedHandler<TTriggerData, TData, TResultBody> = (
   context: InvocationContext,
 ) => FunctionResult<SpecificHttpResponseInit<TResultBody> | void | undefined>;
 
+type JsonParsedHandler<TTriggerData, TData, TResultBody> = (
+  triggerData: TTriggerData,
+  parsedData: TData,
+  context: InvocationContext,
+) => FunctionResult<TResultBody>;
+
 type NoneParsedHandler<TTriggerData, TData> = (triggerData: TTriggerData, parsedData: TData, context: InvocationContext) => FunctionResult<void>;
+
+type ParsedHandlerFor<TResponseType extends ResponseType, TTriggerData, TData, TResultBody> = TResponseType extends 'http'
+  ? HttpParsedHandler<TTriggerData, TData, TResultBody>
+  : TResponseType extends 'json'
+    ? JsonParsedHandler<TTriggerData, TData, TResultBody>
+    : NoneParsedHandler<TTriggerData, TData>;
 
 type ParsedChainData<TTriggerData, TData> = BasicChainData<TTriggerData> & { parsedData: TData };
 
@@ -36,8 +49,8 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
    * @returns A function that satisfies the Azure Functions handler interface.
    */
   public handle<TResultBody = undefined>(
-    handler: TResponseType extends 'http' ? HttpParsedHandler<TTriggerData, TData, TResultBody> : NoneParsedHandler<TTriggerData, TData>,
-  ): (triggerData: TTriggerData, context: InvocationContext) => Promise<TResponseType extends 'http' ? HttpResponseInit : void> {
+    handler: ParsedHandlerFor<TResponseType, TTriggerData, TData, TResultBody>,
+  ): (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>> {
     return (async (triggerData: TTriggerData, context: InvocationContext) => {
       const basicChainData: BasicChainData<TTriggerData> = { triggerData, context };
       const rawData = await this.dataAccessor(basicChainData);
@@ -49,11 +62,13 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
         const zodInstance = typeof this.zodType === 'function' ? this.zodType(basicChainData) : this.zodType;
         const parseResult = zodInstance.safeParse(rawData);
         if (!parseResult.success) {
-          if (this.responseType === 'http') {
-            context.error('Invalid data', parseResult.error.issues);
-            return funcResult('BadRequest', parseResult.error.issues);
+          switch (this.responseType) {
+            case 'http':
+              context.error('Invalid data', parseResult.error.issues);
+              return funcResult('BadRequest', parseResult.error.issues);
+            default:
+              throw parseResult.error;
           }
-          throw parseResult.error;
         }
         parsedData = parseResult.data;
       }
@@ -62,13 +77,26 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
       const failure = await this.executeChain(chainData);
 
       if (failure) {
-        if (this.responseType === 'http') return failure.result;
-        throw new ChainGuardError(failure.result, failure.linkIndex, failure.linkType);
+        const guardError = new ChainGuardError(failure.result, failure.linkIndex, failure.linkType);
+        switch (this.responseType) {
+          case 'http':
+            return failure.result;
+          case 'json':
+            return guardError;
+          case 'none':
+            throw guardError;
+        }
       }
 
       const result = await (handler as HttpParsedHandler<TTriggerData, TData, TResultBody>)(triggerData, parsedData, context);
-      if (this.responseType === 'http') return result || funcResult('OK');
-      return undefined;
-    }) as (triggerData: TTriggerData, context: InvocationContext) => Promise<TResponseType extends 'http' ? HttpResponseInit : void>;
+      switch (this.responseType) {
+        case 'http':
+          return result || funcResult('OK');
+        case 'json':
+          return result;
+        case 'none':
+          return undefined;
+      }
+    }) as (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>>;
   }
 }

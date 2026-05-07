@@ -84,10 +84,9 @@ const timerHandler = startTimerChain()
   });
 
 // MCP tool trigger with parsed arguments
-const mcpHandler = startMcpChain()
-  .parseArgs(myArgsSchema)
+const mcpHandler = startMcpChain(myArgsSchema)
   .handle((triggerData, parsedData, context) => {
-    return funcResult('OK', { result: 'Tool executed' });
+    return { result: 'Tool executed', data: parsedData };
   });
 ```
 

@@ -1,8 +1,10 @@
-import { Timer } from '@azure/functions';
+import { InvocationContext, Timer } from '@azure/functions';
 import { ZodType } from 'zod';
+import { ParsedDataChain } from './parsed-data-chain';
 import { RegularChain } from './regular-chain';
-import { HttpChain, McpChain, ValidatedChain } from './specialized';
-import { ResponseType } from './types';
+import { ValidatedChain } from './specialized';
+import { BasicChainData, LinkFunctor, ResponseType } from './types';
+import { HttpChain } from './specialized';
 
 /**
  * Initializes a new HTTP chain for Azure Functions HTTP triggers.
@@ -48,10 +50,31 @@ export const startTimerChain = () => new RegularChain<Timer, 'none'>('none');
 
 /**
  * Initializes a new MCP chain for MCP tool triggers.
- * MCP triggers return HTTP-style responses. Use `parseArgs()` to access tool arguments.
- * @returns An `McpChain` with `parseArgs()` support
+ * MCP triggers return JSON-style responses. Tool arguments are parsed from `context.triggerMetadata?.mcptoolargs`.
+ * @returns A `ParsedDataChain<unknown, TArgs, 'json'>`
  */
-export const startMcpChain = () => new McpChain();
+export function startMcpChain<TArgs>(): ParsedDataChain<unknown, TArgs, 'json'>;
+/**
+ * Initializes a new MCP chain with Zod validation for the tool arguments.
+ * @param zodSchema - The Zod schema to validate the tool arguments
+ * @returns A `ParsedDataChain<unknown, TArgs, 'json'>`
+ */
+export function startMcpChain<TArgs>(zodSchema: ZodType<TArgs>): ParsedDataChain<unknown, TArgs, 'json'>;
+/**
+ * Initializes a new MCP chain with a dynamic Zod schema for the tool arguments.
+ * @param zodSchema - A function that returns a Zod schema to validate the tool arguments
+ * @returns A `ParsedDataChain<unknown, TArgs, 'json'>`
+ */
+export function startMcpChain<TArgs>(zodSchema: LinkFunctor<BasicChainData<unknown>, ZodType<TArgs>>): ParsedDataChain<unknown, TArgs, 'json'>;
+export function startMcpChain<TArgs>(
+  zodSchema?: ZodType<TArgs> | LinkFunctor<BasicChainData<unknown>, ZodType<TArgs>>,
+): ParsedDataChain<unknown, TArgs, 'json'> {
+  const dataAccessor = async (chainData: BasicChainData<unknown>) => {
+    const context = chainData.context as InvocationContext & { triggerMetadata?: Record<string, unknown> };
+    return context.triggerMetadata?.mcptoolargs as TArgs;
+  };
+  return new ParsedDataChain<unknown, TArgs, 'json'>(dataAccessor, zodSchema, 'json');
+}
 
 /**
  * Initializes a fully generic chain for any trigger type.
@@ -59,5 +82,10 @@ export const startMcpChain = () => new McpChain();
  * @param options - Optional chain options. `responseType` defaults to `'none'`.
  * @returns A `RegularChain<T, TResponseType>`
  */
-export const startGenericChain = <T, TResponseType extends ResponseType = 'none'>(options?: { responseType?: TResponseType }) =>
-  new RegularChain<T, TResponseType>((options?.responseType ?? 'none') as TResponseType);
+export function startGenericChain<T>(): RegularChain<T, 'none'>;
+export function startGenericChain<T>(options: { responseType: 'http' }): RegularChain<T, 'http'>;
+export function startGenericChain<T>(options: { responseType: 'json' }): RegularChain<T, 'json'>;
+export function startGenericChain<T>(options: { responseType: 'none' }): RegularChain<T, 'none'>;
+export function startGenericChain<T>(options?: { responseType?: ResponseType }): RegularChain<T, ResponseType> {
+  return new RegularChain<T, ResponseType>((options?.responseType ?? 'none') as ResponseType);
+}

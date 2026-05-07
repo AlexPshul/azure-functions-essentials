@@ -22,4 +22,16 @@ describe('ChainGuardError', () => {
     expect(error.linkType).toBe('inputBinding');
     expect(error.message).toBe('Chain inputBinding #1 failed.');
   });
+
+  it('should serialize to JSON with toJSON', () => {
+    const guardResult = funcResult('Forbidden', 'Access denied');
+    const error = new ChainGuardError(guardResult, 2, 'guard');
+
+    const json = JSON.parse(JSON.stringify(error));
+    expect(json.error).toBe('ChainGuardError');
+    expect(json.message).toBe('Chain guard #2 failed.');
+    expect(json.guardResult).toEqual(guardResult);
+    expect(json.linkIndex).toBe(2);
+    expect(json.linkType).toBe('guard');
+  });
 });

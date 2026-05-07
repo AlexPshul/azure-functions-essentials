@@ -23,11 +23,11 @@ Data extracted or transformed from trigger data via a data accessor function. Di
 _Avoid_: Body (except on `HttpChain.parseBody()` where it's domain-accurate)
 
 **ResponseType**:
-A `'http' | 'none'` discriminator on a chain that controls two behaviors: (1) what the handler returns — `HttpResponseInit` or `void`, and (2) how guard failures are handled — returned as HTTP responses or thrown as `ChainGuardError`.
+A `'http' | 'json' | 'none'` discriminator on a chain that controls two behaviors: (1) what the handler returns — `HttpResponseInit`, arbitrary JSON, or `void`, and (2) how guard failures are handled — returned as HTTP responses, returned as `ChainGuardError` objects, or thrown as `ChainGuardError`.
 _Avoid_: ErrorMode, returnType
 
 **ChainGuardError**:
-A structured error thrown when a guard fails on a chain with `responseType: 'none'`. Carries the guard result, link index, and link type.
+A structured error for guard/input-binding failures on non-HTTP chains. Thrown on `responseType: 'none'` chains, returned as a serializable value on `responseType: 'json'` chains. Includes `toJSON()` for clean serialization.
 
 **InputBinding**:
 A chain link that fetches and stores data in the invocation context before the handler runs.
@@ -49,7 +49,7 @@ A chain that extracts parsed data from trigger data using a configurable data ac
 - A **Guard** is generic over **TriggerData** — `Guard<unknown>` is usable on any chain
 - An **HttpChain** can produce a **ParsedDataChain** via `parseBody()`
 - A **ValidatedChain** validates **TriggerData** against a Zod schema before the chain runs
-- **ResponseType** determines whether guard failures produce HTTP responses or **ChainGuardErrors**
+- **ResponseType** determines whether guard failures produce HTTP responses, returned **ChainGuardErrors**, or thrown **ChainGuardErrors**
 
 ## Example dialogue
 

@@ -1,6 +1,6 @@
-import { HttpResponseInit, InvocationContext } from '@azure/functions';
+import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
-import { RegularChain } from '../regular-chain';
+import { ChainHandlerFor, ChainResultFor, RegularChain } from '../regular-chain';
 import { ResponseType } from '../types';
 
 /**
@@ -18,16 +18,16 @@ export class ValidatedChain<TData, TResponseType extends ResponseType = 'none'> 
     super(responseType);
   }
 
-  public override handle(
-    handler: Parameters<RegularChain<TData, TResponseType>['handle']>[0],
-  ): (rawTriggerData: unknown, context: InvocationContext) => Promise<TResponseType extends 'http' ? HttpResponseInit : void> {
+  public override handle<TResultBody = undefined>(
+    handler: ChainHandlerFor<TResponseType, TData, TResultBody>,
+  ): (rawTriggerData: unknown, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>> {
     const parentHandle = super.handle(handler);
 
     return (async (rawTriggerData: unknown, context: InvocationContext) => {
       const parseResult = this.zodSchema.safeParse(rawTriggerData);
       if (!parseResult.success) throw parseResult.error;
 
-      return parentHandle(parseResult.data, context);
-    }) as (rawTriggerData: unknown, context: InvocationContext) => Promise<TResponseType extends 'http' ? HttpResponseInit : void>;
+      return parentHandle(parseResult.data as TData, context);
+    }) as (rawTriggerData: unknown, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>>;
   }
 }
