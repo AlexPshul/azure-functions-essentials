@@ -4,10 +4,10 @@
 
 ## What are Guards?
 
-Guards are mechanisms that validate incoming requests before they reach your Azure Functions' business logic. They help ensure that only valid and authorized requests are processed. By creating a common guard in your system, you can reuse it in multiple endpoints easily.
+Guards are mechanisms that validate incoming trigger data before it reaches your Azure Functions' business logic. They help ensure that only valid and authorized data is processed. By creating a common guard in your system, you can reuse it in multiple endpoints easily.
 
 ```
-Request → 🛡️ GUARDS 🛡️ → Your Function Logic
+Trigger Data → 🛡️ GUARDS 🛡️ → Your Function Logic
 ```
 
 Full list of guards:
@@ -25,7 +25,7 @@ Full list of guards:
 
 ### `guard` - The Basic Building Block
 
-This is the foundational tool for creating guards. It validates requests and either allows them to proceed (returning `true`) or blocks them with an appropriate response.
+This is the foundational tool for creating guards. It validates trigger data and either allows it to proceed (returning `true`) or blocks it with an appropriate response.
 
 ```typescript
 const customGuard = guard(({ triggerData, context }) => {
@@ -70,7 +70,7 @@ This guard allows a request to pass if any of its sub-guards approve it. Useful 
 
 ```typescript
 const accessGuard = anyGuard(adminGuard, ownerGuard, specialPermissionGuard);
-// Grants access if any of the sub-guards validate the request
+// Grants access if any of the sub-guards pass
 ```
 
 You can also use the built-in `useAnyGuard` method to combine multiple guards in a chain:
@@ -78,7 +78,7 @@ You can also use the built-in `useAnyGuard` method to combine multiple guards in
 ```typescript
 startHttpChain()
   .useAnyGuard(adminGuard, ownerGuard, specialPermissionGuard)
-  .handle((triggerData, ctx) => {
+  .handle((triggerData, context) => {
     // Only if any of the guards pass will this code execute
     return funcResult('OK', 'Access granted.');
   });
@@ -86,7 +86,7 @@ startHttpChain()
 
 ### `validateInputExistsGuard` - Input Validator
 
-This guard ensures that the required Azure Functions input bindings, passed via `extraInput` in the function context, are present and has a value in it.
+This guard ensures that the required Azure Functions input bindings, passed via `extraInput` in the function context, are present and have a value in it.
 
 ```typescript
 const cosmosDbInput = input.cosmosDB({});
@@ -104,7 +104,7 @@ const userGuard = validateInputExistsGuard(cosmosDbInput);
 startHttpChain()
   .useGuard(headerGuard('Content-Type', 'application/json'))
   .useGuard(adminGuard)
-  .handle((triggerData, ctx) => {
+  .handle((triggerData, context) => {
     // Only admins with JSON requests reach this point
     return funcResult('OK', 'Access granted.');
   });
@@ -117,7 +117,7 @@ To allow different types of users through, use `useAnyGuard` for OR conditions:
 ```typescript
 startHttpChain()
   .useAnyGuard(adminGuard, moderatorGuard, resourceOwnerGuard)
-  .handle((triggerData, ctx) => {
+  .handle((triggerData, context) => {
     // Any of the above guards passing will allow access
     return funcResult('OK', 'Access granted.');
   });
