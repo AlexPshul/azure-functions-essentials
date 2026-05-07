@@ -29,7 +29,7 @@ describe('ParsedDataChain', () => {
 
       const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new ParsedDataChain(httpAccessor, undefined, 'http');
+      const chain = new ParsedDataChain(httpAccessor, undefined, { responseType: 'http' });
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -54,7 +54,7 @@ describe('ParsedDataChain', () => {
       const chain = new ParsedDataChain<HttpRequest, typeof requestBody, 'http'>(
         httpAccessor as (chainData: BasicChainData<HttpRequest>) => Promise<typeof requestBody>,
         undefined,
-        'http',
+        { responseType: 'http' },
       ).useGuard(({ parsedData }) => bodyCheckGuard(parsedData));
 
       // Act
@@ -80,7 +80,7 @@ describe('ParsedDataChain', () => {
 
       const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new ParsedDataChain(httpAccessor, schema, 'http');
+      const chain = new ParsedDataChain(httpAccessor, schema, { responseType: 'http' });
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -106,7 +106,7 @@ describe('ParsedDataChain', () => {
 
       const handlerFn = jest.fn().mockImplementation((req, parsedData) => funcResult('OK', parsedData));
 
-      const chain = new ParsedDataChain(httpAccessor, schemaFn, 'http');
+      const chain = new ParsedDataChain(httpAccessor, schemaFn, { responseType: 'http' });
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -130,7 +130,7 @@ describe('ParsedDataChain', () => {
 
       const handlerFn = jest.fn();
 
-      const chain = new ParsedDataChain(httpAccessor, schema, 'http');
+      const chain = new ParsedDataChain(httpAccessor, schema, { responseType: 'http' });
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -157,7 +157,7 @@ describe('ParsedDataChain', () => {
       });
 
       const handlerFn = jest.fn();
-      const chain = new ParsedDataChain(dataAccessor, schema, 'none');
+      const chain = new ParsedDataChain(dataAccessor, schema, { responseType: 'none' });
 
       // Act & Assert
       const handler = chain.handle(handlerFn);
@@ -186,7 +186,7 @@ describe('ParsedDataChain', () => {
       const chain = new ParsedDataChain<HttpRequest, typeof requestBody, 'http'>(
         httpAccessor as (chainData: BasicChainData<HttpRequest>) => Promise<typeof requestBody>,
         undefined,
-        'http',
+        { responseType: 'http' },
       )
         .useGuard(guard(passingGuardCheck))
         .useInputBinding(({ parsedData }) => binding(parsedData.name));
@@ -211,7 +211,7 @@ describe('ParsedDataChain', () => {
       const failingGuard = guard(() => customResponse);
       const handlerFn = jest.fn();
 
-      const chain = new ParsedDataChain(httpAccessor, undefined, 'http').useGuard(failingGuard);
+      const chain = new ParsedDataChain(httpAccessor, undefined, { responseType: 'http' }).useGuard(failingGuard);
 
       // Act
       const handler = chain.handle(handlerFn);
@@ -230,7 +230,7 @@ describe('ParsedDataChain', () => {
 
       const handlerFn = jest.fn().mockResolvedValue(undefined);
 
-      const chain = new ParsedDataChain(httpAccessor, undefined, 'http');
+      const chain = new ParsedDataChain(httpAccessor, undefined, { responseType: 'http' });
 
       // Act
       const handler = chain.handle(handlerFn);

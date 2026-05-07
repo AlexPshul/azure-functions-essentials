@@ -38,15 +38,15 @@ export function startMessageChain<T>(): RegularChain<T, 'none'>;
  */
 export function startMessageChain<T>(zodSchema: ZodType<T>): ValidatedChain<T, 'none'>;
 export function startMessageChain<T>(zodSchema?: ZodType<T>): RegularChain<T, 'none'> | ValidatedChain<T, 'none'> {
-  if (zodSchema) return new ValidatedChain<T, 'none'>(zodSchema, 'none');
-  return new RegularChain<T, 'none'>('none');
+  if (zodSchema) return new ValidatedChain<T, 'none'>(zodSchema, { responseType: 'none' });
+  return new RegularChain<T, 'none'>({ responseType: 'none' });
 }
 
 /**
  * Initializes a new timer chain for Azure Functions timer triggers.
  * @returns A `RegularChain<Timer, 'none'>`
  */
-export const startTimerChain = () => new RegularChain<Timer, 'none'>('none');
+export const startTimerChain = () => new RegularChain<Timer, 'none'>({ responseType: 'none' });
 
 /**
  * Initializes a new MCP chain for MCP tool triggers.
@@ -73,7 +73,7 @@ export function startMcpChain<TArgs>(
     const context = chainData.context as InvocationContext & { triggerMetadata?: Record<string, unknown> };
     return context.triggerMetadata?.mcptoolargs as TArgs;
   };
-  return new ParsedDataChain<unknown, TArgs, 'json'>(dataAccessor, zodSchema, 'json');
+  return new ParsedDataChain<unknown, TArgs, 'json'>(dataAccessor, zodSchema, { responseType: 'json' });
 }
 
 /**
@@ -87,5 +87,5 @@ export function startGenericChain<T>(options: { responseType: 'http' }): Regular
 export function startGenericChain<T>(options: { responseType: 'json' }): RegularChain<T, 'json'>;
 export function startGenericChain<T>(options: { responseType: 'none' }): RegularChain<T, 'none'>;
 export function startGenericChain<T>(options?: { responseType?: ResponseType }): RegularChain<T, ResponseType> {
-  return new RegularChain<T, ResponseType>((options?.responseType ?? 'none') as ResponseType);
+  return new RegularChain<T, ResponseType>({ responseType: (options?.responseType ?? 'none') as ResponseType });
 }

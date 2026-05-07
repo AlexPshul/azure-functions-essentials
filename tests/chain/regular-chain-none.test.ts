@@ -14,7 +14,7 @@ describe('RegularChain with responseType none', () => {
     const triggerData = { message: 'hello' };
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>('none');
+    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' });
     const handler = chain.handle(handlerFn);
     await handler(triggerData, mockContext);
 
@@ -26,7 +26,7 @@ describe('RegularChain with responseType none', () => {
     const failingGuard = guard(() => false);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>('none').useGuard(failingGuard);
+    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
 
     await expect(handler(triggerData, mockContext)).rejects.toThrow(ChainGuardError);
@@ -39,7 +39,7 @@ describe('RegularChain with responseType none', () => {
     const failingGuard = guard(() => customResponse);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>('none').useGuard(failingGuard);
+    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
 
     try {
@@ -55,7 +55,7 @@ describe('RegularChain with responseType none', () => {
     const triggerData = { message: 'hello' };
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>('none');
+    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' });
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
@@ -67,7 +67,7 @@ describe('RegularChain with responseType none', () => {
     const guardCheck = jest.fn().mockReturnValue(true);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>('none').useGuard(guard(guardCheck));
+    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(guard(guardCheck));
     const handler = chain.handle(handlerFn);
     await handler(triggerData, mockContext);
 

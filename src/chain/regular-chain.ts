@@ -2,7 +2,7 @@ import { FunctionResult, HttpResponseInit, InvocationContext } from '@azure/func
 import { funcResult } from '../helpers';
 import { BaseChain } from './base-chain';
 import { ChainGuardError } from './chain-guard-error';
-import { BasicChainData, ResponseType, SpecificHttpResponseInit } from './types';
+import { BasicChainData, ChainOptions, ResponseType, SpecificHttpResponseInit } from './types';
 
 export type HttpChainHandler<TTriggerData, TBody> = (
   triggerData: TTriggerData,
@@ -65,7 +65,11 @@ export class RegularChain<TTriggerData = unknown, TResponseType extends Response
     }) as (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>>;
   }
 
-  constructor(protected readonly responseType: TResponseType = 'none' as TResponseType) {
+  constructor(protected readonly options: ChainOptions<TResponseType> = { responseType: 'none' as TResponseType }) {
     super();
+  }
+
+  protected get responseType(): TResponseType {
+    return this.options.responseType;
   }
 }

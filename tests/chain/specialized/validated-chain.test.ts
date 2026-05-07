@@ -22,7 +22,7 @@ describe('ValidatedChain', () => {
       const validData = { name: 'Test', age: 30 };
       const handlerFn = jest.fn();
 
-      const chain = new ValidatedChain(schema, 'none');
+      const chain = new ValidatedChain(schema, { responseType: 'none' });
       const handler = chain.handle(handlerFn);
       await handler(validData as unknown, mockContext);
 
@@ -33,7 +33,7 @@ describe('ValidatedChain', () => {
       const invalidData = { name: 'Test', age: 15 };
       const handlerFn = jest.fn();
 
-      const chain = new ValidatedChain(schema, 'none');
+      const chain = new ValidatedChain(schema, { responseType: 'none' });
       const handler = chain.handle(handlerFn);
 
       await expect(handler(invalidData as unknown, mockContext)).rejects.toThrow();
@@ -45,7 +45,7 @@ describe('ValidatedChain', () => {
       const guardCheck = jest.fn().mockReturnValue(true);
       const handlerFn = jest.fn();
 
-      const chain = new ValidatedChain(schema, 'none').useGuard(guard(guardCheck));
+      const chain = new ValidatedChain(schema, { responseType: 'none' }).useGuard(guard(guardCheck));
       const handler = chain.handle(handlerFn);
 
       await expect(handler(invalidData as unknown, mockContext)).rejects.toThrow();
@@ -58,7 +58,7 @@ describe('ValidatedChain', () => {
       const guardCheck = jest.fn().mockReturnValue(true);
       const handlerFn = jest.fn();
 
-      const chain = new ValidatedChain(schema, 'none').useGuard(guard(guardCheck));
+      const chain = new ValidatedChain(schema, { responseType: 'none' }).useGuard(guard(guardCheck));
       const handler = chain.handle(handlerFn);
       await handler(validData as unknown, mockContext);
 

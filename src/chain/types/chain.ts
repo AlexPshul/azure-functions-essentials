@@ -4,6 +4,7 @@ import { Guard } from './guard';
 import { InputBindingSetter } from './input-binding-setter';
 
 export type ResponseType = 'http' | 'json' | 'none';
+export type ChainOptions<TResponseType extends ResponseType = 'none'> = { responseType: TResponseType };
 export type BasicChainData<T = unknown> = { triggerData: T; context: InvocationContext };
 export type LinkFunctor<TChainData extends BasicChainData, TResult> = (chainData: TChainData) => TResult;
 

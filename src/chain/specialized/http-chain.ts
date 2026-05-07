@@ -10,7 +10,7 @@ import { BasicChainData, LinkFunctor } from '../types';
  */
 export class HttpChain extends RegularChain<HttpRequest, 'http'> {
   constructor() {
-    super('http');
+    super({ responseType: 'http' });
   }
 
   /**
@@ -35,7 +35,7 @@ export class HttpChain extends RegularChain<HttpRequest, 'http'> {
   public parseBody<TBody>(zodType?: LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>): ParsedDataChain<HttpRequest, TBody, 'http'>;
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
     const dataAccessor = async (chainData: BasicChainData<HttpRequest>) => (await chainData.triggerData.json()) as TBody;
-    const parsedDataChain = new ParsedDataChain<HttpRequest, TBody, 'http'>(dataAccessor, zodType, 'http');
+    const parsedDataChain = new ParsedDataChain<HttpRequest, TBody, 'http'>(dataAccessor, zodType, { responseType: 'http' });
     return parsedDataChain.copyFromChain(this, data => data);
   }
 }

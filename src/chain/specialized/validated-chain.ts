@@ -1,7 +1,7 @@
 import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { ChainHandlerFor, ChainResultFor, RegularChain } from '../regular-chain';
-import { ResponseType } from '../types';
+import { ChainOptions, ResponseType } from '../types';
 
 /**
  * A chain that validates raw trigger data against a Zod schema before running guards or the handler.
@@ -13,9 +13,9 @@ import { ResponseType } from '../types';
 export class ValidatedChain<TData, TResponseType extends ResponseType = 'none'> extends RegularChain<TData, TResponseType> {
   constructor(
     private readonly zodSchema: ZodType<TData>,
-    responseType: TResponseType = 'none' as TResponseType,
+    options: ChainOptions<TResponseType> = { responseType: 'none' as TResponseType },
   ) {
-    super(responseType);
+    super(options);
   }
 
   public override handle<TResultBody = undefined>(

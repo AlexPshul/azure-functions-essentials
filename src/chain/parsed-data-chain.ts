@@ -4,7 +4,7 @@ import { funcResult } from '../helpers';
 import { BaseChain } from './base-chain';
 import { ChainGuardError } from './chain-guard-error';
 import { ChainResultFor } from './regular-chain';
-import { BasicChainData, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
+import { BasicChainData, ChainOptions, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
 
 type HttpParsedHandler<TTriggerData, TData, TResultBody> = (
   triggerData: TTriggerData,
@@ -38,9 +38,13 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
   constructor(
     private readonly dataAccessor: (chainData: BasicChainData<TTriggerData>) => Promise<TData>,
     private readonly zodType: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>> | undefined,
-    private readonly responseType: TResponseType = 'http' as TResponseType,
+    private readonly options: ChainOptions<TResponseType> = { responseType: 'http' as TResponseType },
   ) {
     super();
+  }
+
+  private get responseType(): TResponseType {
+    return this.options.responseType;
   }
 
   /**
