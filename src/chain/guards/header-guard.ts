@@ -1,7 +1,6 @@
 import { HttpRequest } from '@azure/functions';
 import { funcResult } from '../../helpers';
 import { getHeader } from '../../helpers/get-header';
-import { Guard } from '../types';
 import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
@@ -16,7 +15,7 @@ import { guard } from './guard';
  * // Check if Content-Type header is 'application/json'
  * const jsonContentGuard = headerGuard('Content-Type', 'application/json');
  */
-export const headerGuard = (headerName: string, expectedValue: string): Guard<HttpRequest> =>
+export const headerGuard = (headerName: string, expectedValue: string) =>
   guard<HttpRequest>(({ triggerData, context }) => {
     try {
       const headerValue = getHeader(triggerData, headerName, true);

@@ -1,7 +1,6 @@
 import { HttpRequest } from '@azure/functions';
 import { funcResult } from '../../helpers';
 import { getHeaderFlag } from '../../helpers/get-header';
-import { Guard } from '../types';
 import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
@@ -16,7 +15,7 @@ import { guard } from './guard';
  * // Check if x-feature-enabled header is truthful
  * const featureEnabledGuard = headerFlagGuard('x-feature-enabled');
  */
-export const headerFlagGuard = (headerName: string): Guard<HttpRequest> =>
+export const headerFlagGuard = (headerName: string) =>
   guard<HttpRequest>(({ triggerData, context }) => {
     try {
       const headerValue = getHeaderFlag(triggerData, headerName);
