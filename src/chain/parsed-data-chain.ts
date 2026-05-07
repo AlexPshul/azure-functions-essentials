@@ -2,7 +2,7 @@ import { FunctionResult, InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
 import { BaseChain } from './base-chain';
-import { ChainResultFor } from './regular-chain';
+import { ChainWrapper } from './regular-chain';
 import { BasicChainData, ChainOptions, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
 
 type HttpParsedHandler<TTriggerData, TData, TResultBody> = (
@@ -50,9 +50,9 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
    */
   public handle<TResultBody = undefined>(
     handler: ParsedHandlerFor<TResponseType, TTriggerData, TData, TResultBody>,
-  ): (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>> {
+  ): ChainWrapper<TTriggerData, TResponseType, TResultBody> {
     return (async (triggerData: TTriggerData, context: InvocationContext) => {
-      const basicChainData: BasicChainData<TTriggerData> = { triggerData, context };
+      const basicChainData = { triggerData, context };
       const rawData = await this.dataAccessor(basicChainData);
       let parsedData: TData;
 
@@ -73,12 +73,11 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
         parsedData = parseResult.data;
       }
 
-      const chainData: ParsedChainData<TTriggerData, TData> = { triggerData, context, parsedData };
-      const failure = await this.executeChain(chainData);
+      const failure = await this.executeChain({ triggerData, context, parsedData });
       if (failure) return this.handleFailure(failure);
 
-      const result = await (handler as HttpParsedHandler<TTriggerData, TData, TResultBody>)(triggerData, parsedData, context);
+      const result = await handler(triggerData, parsedData, context);
       return this.handleResult(result);
-    }) as (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>>;
+    }) as ChainWrapper<TTriggerData, TResponseType, TResultBody>;
   }
 }

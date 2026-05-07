@@ -1,6 +1,6 @@
 import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
-import { ChainHandlerFor, ChainResultFor, RegularChain } from '../regular-chain';
+import { ChainHandlerFor, ChainWrapper, RegularChain } from '../regular-chain';
 import { ChainOptions, ResponseType } from '../types';
 
 /**
@@ -20,7 +20,7 @@ export class ValidatedChain<TData, TResponseType extends ResponseType = 'none'> 
 
   public override handle<TResultBody = undefined>(
     handler: ChainHandlerFor<TResponseType, TData, TResultBody>,
-  ): (rawTriggerData: unknown, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>> {
+  ): ChainWrapper<unknown, TResponseType, TResultBody> {
     const parentHandle = super.handle(handler);
 
     return (async (rawTriggerData: unknown, context: InvocationContext) => {
@@ -28,6 +28,6 @@ export class ValidatedChain<TData, TResponseType extends ResponseType = 'none'> 
       if (!parseResult.success) throw parseResult.error;
 
       return parentHandle(parseResult.data as TData, context);
-    }) as (rawTriggerData: unknown, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>>;
+    }) as ChainWrapper<unknown, TResponseType, TResultBody>;
   }
 }

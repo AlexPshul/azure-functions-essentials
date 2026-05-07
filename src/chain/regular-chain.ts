@@ -24,6 +24,11 @@ export type ChainResultFor<TResponseType extends ResponseType, TResultBody = und
     ? TResultBody | ChainGuardError
     : void;
 
+export type ChainWrapper<TTriggerData, TResponseType extends ResponseType, TResultBody = undefined> = (
+  triggerData: TTriggerData,
+  context: InvocationContext,
+) => Promise<ChainResultFor<TResponseType, TResultBody>>;
+
 export class RegularChain<TTriggerData = unknown, TResponseType extends ResponseType = 'none'> extends BaseChain<
   BasicChainData<TTriggerData>,
   TResponseType
@@ -35,14 +40,13 @@ export class RegularChain<TTriggerData = unknown, TResponseType extends Response
    */
   public handle<TResultBody = undefined>(
     handler: ChainHandlerFor<TResponseType, TTriggerData, TResultBody>,
-  ): (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>> {
+  ): ChainWrapper<TTriggerData, TResponseType, TResultBody> {
     return (async (triggerData: TTriggerData, context: InvocationContext) => {
-      const chainData: BasicChainData<TTriggerData> = { triggerData, context };
-      const failure = await this.executeChain(chainData);
+      const failure = await this.executeChain({ triggerData, context });
       if (failure) return this.handleFailure(failure);
 
-      const result = await (handler as HttpChainHandler<TTriggerData, TResultBody>)(triggerData, context);
+      const result = await handler(triggerData, context);
       return this.handleResult(result);
-    }) as (triggerData: TTriggerData, context: InvocationContext) => Promise<ChainResultFor<TResponseType, TResultBody>>;
+    }) as ChainWrapper<TTriggerData, TResponseType, TResultBody>;
   }
 }
