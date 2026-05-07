@@ -15,7 +15,7 @@ const notFoundError = (input: string | FunctionInput) => {
  * @param failOnEmptyArray - A flag indicating whether to consider an empty array as non-existent.
  * @returns A boolean indicating whether the input exists.
  */
-export const validateInputExistsGuard = (input: string | FunctionInput, failOnEmptyArray = true): Guard<unknown> =>
+export const validateInputExistsGuard = (input: string | FunctionInput, failOnEmptyArray = true): Guard =>
   guard(({ context }) => {
     const inputResult = context.extraInputs.get(input);
 
