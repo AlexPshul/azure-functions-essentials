@@ -16,5 +16,5 @@ export function startMessageChain<T>(): RegularChain<T, 'none'>;
  */
 export function startMessageChain<T>(zodSchema: ZodType<T>): ValidatedChain<T, 'none'>;
 export function startMessageChain<T>(zodSchema?: ZodType<T>): RegularChain<T, 'none'> | ValidatedChain<T, 'none'> {
-  return zodSchema ? new ValidatedChain(zodSchema, { responseType: 'none' }) : new RegularChain<T, 'none'>({ responseType: 'none' });
+  return zodSchema ? new ValidatedChain(zodSchema, { responseType: 'none' }) : new RegularChain<T>({ responseType: 'none' });
 }
