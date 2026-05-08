@@ -61,7 +61,7 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
         const zodInstance = typeof this.zodType === 'function' ? this.zodType(basicChainData) : this.zodType;
         const parseResult = zodInstance.safeParse(rawData);
         if (!parseResult.success) {
-          switch (this.responseType) {
+          switch (this.options.responseType) {
             case 'http':
               context.error('Invalid data', parseResult.error.issues);
               return funcResult('BadRequest', parseResult.error.issues);

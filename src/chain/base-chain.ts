@@ -17,10 +17,6 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
 
   constructor(protected readonly options: ChainOptions<TResponseType> = { responseType: 'none' as TResponseType }) {}
 
-  protected get responseType(): TResponseType {
-    return this.options.responseType;
-  }
-
   /**
    * Registers a guard in the execution chain.
    * The guard is used to check conditions on the trigger data before further processing.
@@ -155,7 +151,7 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   }
 
   protected handleFailure(failure: ChainFailure) {
-    switch (this.responseType) {
+    switch (this.options.responseType) {
       case 'http':
         return failure.result;
       case 'json':
@@ -166,7 +162,7 @@ export abstract class BaseChain<TChainData extends BasicChainData = BasicChainDa
   }
 
   protected handleResult<TResult>(result: TResult) {
-    switch (this.responseType) {
+    switch (this.options.responseType) {
       case 'http':
         return result || funcResult('OK');
       case 'json':
