@@ -27,14 +27,12 @@ export type ChainFailure = {
   linkType: 'guard' | 'inputBinding';
 };
 
-export type HttpChainHandler<TTriggerData, TBody> = (
+type HttpChainHandler<TTriggerData, TBody> = (
   triggerData: TTriggerData,
   context: InvocationContext,
 ) => FunctionResult<SpecificHttpResponseInit<TBody> | void | undefined>;
-
-export type JsonChainHandler<TTriggerData, TResultBody> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<TResultBody>;
-
-export type NoneChainHandler<TTriggerData> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<void>;
+type JsonChainHandler<TTriggerData, TResultBody> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<TResultBody>;
+type NoneChainHandler<TTriggerData> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<void>;
 
 export type ChainHandlerFor<TResponseType extends ResponseType, TTriggerData, TResultBody> = TResponseType extends 'http'
   ? HttpChainHandler<TTriggerData, TResultBody>
