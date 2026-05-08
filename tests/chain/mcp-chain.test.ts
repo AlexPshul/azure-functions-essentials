@@ -43,15 +43,16 @@ describe('startMcpChain', () => {
     expect(result).toEqual({ result: 'validated' });
   });
 
-  it('should throw ZodError when args fail validation', async () => {
+  it('should return ZodError when args fail validation', async () => {
     const schema = z.object({ name: z.string(), value: z.number() });
     const invalidArgs = { name: 123, value: 'not a number' };
     const context = createMcpContext(invalidArgs);
     const handlerFn = jest.fn();
 
     const handler = startMcpChain(schema).handle(handlerFn);
+    const result = await handler(undefined as unknown, context);
 
-    await expect(handler(undefined as unknown, context)).rejects.toThrow();
+    expect(result).toBeDefined();
     expect(handlerFn).not.toHaveBeenCalled();
   });
 

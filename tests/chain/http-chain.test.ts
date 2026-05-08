@@ -2,7 +2,7 @@ import { HttpRequest, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
 import { funcResult, guard, inputFactory, HttpChain } from '../../src';
 
-describe('HttpChain (formerly RegularChain HTTP behavior)', () => {
+describe('HttpChain', () => {
   // Mock objects
   const mockRequest = {
     url: 'https://www.pshul.com',
