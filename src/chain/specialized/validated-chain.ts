@@ -27,7 +27,7 @@ export class ValidatedChain<TData, TResponseType extends ResponseType = 'none'> 
       const parseResult = this.zodSchema.safeParse(rawTriggerData);
       if (!parseResult.success) throw parseResult.error;
 
-      return parentHandle(parseResult.data as TData, context);
+      return parentHandle(parseResult.data, context);
     }) as ChainWrapper<unknown, TResponseType, TResultBody>;
   }
 }
