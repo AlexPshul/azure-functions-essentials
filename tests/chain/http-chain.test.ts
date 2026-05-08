@@ -165,5 +165,23 @@ describe('HttpChain', () => {
       expect(result).toEqual(funcResult('OK', requestBody));
       expect(schemaFn).toHaveBeenCalled();
     });
+
+    it('should return BadRequest when request.json() throws (malformed JSON)', async () => {
+      // Arrange
+      (mockRequest.json as jest.Mock).mockRejectedValue(new SyntaxError('Unexpected token'));
+      const handlerFn = jest.fn();
+
+      const chain = new HttpChain();
+
+      // Act
+      const parsedChain = chain.parseBody();
+      const handler = parsedChain.handle(handlerFn);
+      const result = await handler(mockRequest, mockContext);
+
+      // Assert
+      expect(handlerFn).not.toHaveBeenCalled();
+      expect(result.status).toBe(400);
+      expect(mockContext.error).toHaveBeenCalled();
+    });
   });
 });

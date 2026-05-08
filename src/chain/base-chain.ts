@@ -15,7 +15,7 @@ const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(
 export abstract class BaseChain<TChainData extends BasicChainData = BasicChainData, TResponseType extends ResponseType = ResponseType> {
   protected chainLink: ChainLink<TChainData>[] = [];
 
-  constructor(protected readonly options: ChainOptions<TResponseType> = { responseType: 'none' as TResponseType }) {}
+  constructor(protected readonly options: ChainOptions<TResponseType>) {}
 
   /**
    * Registers a guard in the execution chain.

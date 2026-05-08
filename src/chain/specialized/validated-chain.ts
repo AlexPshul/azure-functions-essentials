@@ -13,7 +13,7 @@ import { ChainHandlerFor, ChainOptions, ChainWrapper, ResponseType } from '../ty
 export class ValidatedChain<TData, TResponseType extends ResponseType = 'none'> extends RegularChain<TData, TResponseType> {
   constructor(
     private readonly zodSchema: ZodType<TData>,
-    options: ChainOptions<TResponseType> = { responseType: 'none' as TResponseType },
+    options: ChainOptions<TResponseType>,
   ) {
     super(options);
   }

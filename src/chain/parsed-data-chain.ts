@@ -37,7 +37,7 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
   constructor(
     private readonly dataAccessor: (chainData: BasicChainData<TTriggerData>) => Promise<TData> | TData,
     private readonly zodType: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>> | undefined,
-    options: ChainOptions<TResponseType> = { responseType: 'http' as TResponseType },
+    options: ChainOptions<TResponseType>,
   ) {
     super(options);
   }
@@ -52,7 +52,18 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
   ): ChainWrapper<TTriggerData, TResponseType, TResultBody> {
     return (async (triggerData: TTriggerData, context: InvocationContext) => {
       const basicChainData = { triggerData, context };
-      const rawData = await this.dataAccessor(basicChainData);
+
+      let rawData: TData;
+      try {
+        rawData = await this.dataAccessor(basicChainData);
+      } catch (error) {
+        if (this.options.responseType === 'http') {
+          context.error('Failed to parse data', error);
+          return funcResult('BadRequest', 'Failed to parse data');
+        }
+        throw error;
+      }
+
       let parsedData: TData;
 
       if (!this.zodType) {
