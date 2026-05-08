@@ -12,5 +12,5 @@ export function startGenericChain<T>(options: { responseType: 'http' }): Regular
 export function startGenericChain<T>(options: { responseType: 'json' }): RegularChain<T, 'json'>;
 export function startGenericChain<T>(options: { responseType: 'none' }): RegularChain<T, 'none'>;
 export function startGenericChain<T>(options?: { responseType?: ResponseType }): RegularChain<T, ResponseType> {
-  return new RegularChain<T, ResponseType>({ responseType: (options?.responseType ?? 'none') as ResponseType });
+  return new RegularChain<T, ResponseType>({ responseType: options?.responseType ?? 'none' });
 }
