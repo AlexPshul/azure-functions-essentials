@@ -1,28 +1,29 @@
+import { HttpRequest } from '@azure/functions';
 import { funcResult } from '../../helpers';
 import { getHeaderFlag } from '../../helpers/get-header';
 import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
 
 /**
- * Creates a guard that checks if a specific header flag has the expected boolean value.
+ * Creates a guard that checks if a specific header exists with a truthful value.
+ * The header is considered truthful if it is present and its value is not "false" (case-insensitive).
  *
  * @param headerName - The name of the header to check
- * @param expectedValue - The expected boolean value of the header flag
- * @returns A guard that checks if the header exists and has the expected boolean value
+ * @returns A guard that checks if the header exists and has a truthful value
  *
  * @example
- * // Check if x-feature-enabled header is true
- * const featureEnabledGuard = headerFlagGuard('x-feature-enabled', true);
+ * // Check if x-feature-enabled header is truthful
+ * const featureEnabledGuard = headerFlagGuard('x-feature-enabled');
  */
 export const headerFlagGuard = (headerName: string) =>
-  guard((req, ctx) => {
+  guard<HttpRequest>(({ triggerData, context }) => {
     try {
-      const headerValue = getHeaderFlag(req, headerName);
+      const headerValue = getHeaderFlag(triggerData, headerName);
 
       if (headerValue) return true;
 
       // Log the actual values for debugging but don't expose in the response
-      ctx.error(`Missing the flag [${headerName}] in the request headers.`);
+      context.error(`Missing the flag [${headerName}] in the request headers.`);
 
       return DEFAULT_WRONG_HEADER_RESPONSE;
     } catch (error) {

@@ -1,3 +1,4 @@
+import { HttpRequest } from '@azure/functions';
 import { getHeaderArray } from '../../helpers';
 import { DEFAULT_WRONG_HEADER_RESPONSE } from './consts';
 import { guard } from './guard';
@@ -10,8 +11,8 @@ import { guard } from './guard';
  * @returns A guard function that validates the presence of values in the header
  */
 export const allValuesHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard((req, context) => {
-    const headerArray = getHeaderArray(req, header, separator);
+  guard<HttpRequest>(({ triggerData, context }) => {
+    const headerArray = getHeaderArray(triggerData, header, separator);
 
     if (values.every(value => headerArray.includes(value))) return true;
 
@@ -27,8 +28,8 @@ export const allValuesHeaderGuard = (header: string, values: string[], separator
  * @returns A guard function that validates the presence of values in the header
  */
 export const exactValuesHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard((req, context) => {
-    const headerArray = getHeaderArray(req, header, separator);
+  guard<HttpRequest>(({ triggerData, context }) => {
+    const headerArray = getHeaderArray(triggerData, header, separator);
 
     if (headerArray.length === values.length && values.every(value => headerArray.includes(value))) return true;
 
@@ -44,8 +45,8 @@ export const exactValuesHeaderGuard = (header: string, values: string[], separat
  * @return A guard function that validates the presence of values in the header
  * */
 export const atLeastOneHeaderGuard = (header: string, values: string[], separator = ',') =>
-  guard((req, context) => {
-    const headerArray = getHeaderArray(req, header, separator);
+  guard<HttpRequest>(({ triggerData, context }) => {
+    const headerArray = getHeaderArray(triggerData, header, separator);
 
     if (values.some(value => headerArray.includes(value))) return true;
 

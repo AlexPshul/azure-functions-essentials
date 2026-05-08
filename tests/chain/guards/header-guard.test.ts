@@ -10,9 +10,7 @@ describe('headerGuard', () => {
     mockRequest = new HttpRequest({
       url: 'https://example.com',
       method: 'GET',
-      headers: {
-        // Headers will be set in individual tests
-      },
+      headers: {},
     });
 
     mockContext = new InvocationContext();
@@ -31,7 +29,7 @@ describe('headerGuard', () => {
     const guard = headerGuard('Content-Type', 'application/json');
 
     // Act
-    const result = await guard.check(mockRequest, mockContext);
+    const result = await guard.check({ triggerData: mockRequest, context: mockContext });
 
     // Assert
     expect(result).toBe(true);
@@ -49,7 +47,7 @@ describe('headerGuard', () => {
     const guard = headerGuard('Content-Type', 'application/json');
 
     // Act
-    const result = await guard.check(mockRequest, mockContext);
+    const result = await guard.check({ triggerData: mockRequest, context: mockContext });
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));
@@ -61,7 +59,7 @@ describe('headerGuard', () => {
     const guard = headerGuard('Content-Type', 'application/json');
 
     // Act
-    const result = await guard.check(mockRequest, mockContext);
+    const result = await guard.check({ triggerData: mockRequest, context: mockContext });
 
     // Assert
     expect(result).toEqual(funcResult('Forbidden', 'Missing or invalid header'));

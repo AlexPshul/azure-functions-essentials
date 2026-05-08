@@ -7,11 +7,11 @@ import { guard } from './guard';
  * @param guards - A list of guards to be used as a single link in the chain.
  * @returns A guard that checks if any of the provided guards pass.
  */
-export const anyGuard = (...guards: Guard[]): Guard =>
-  guard(async (request, context) => {
+export const anyGuard = <T = unknown>(...guards: Guard<T>[]) =>
+  guard<T>(async chainData => {
     const results = [];
     for (const guard of guards) {
-      const result = await guard.check(request, context);
+      const result = await guard.check(chainData);
       results.push(result);
       if (result === true) return true;
     }

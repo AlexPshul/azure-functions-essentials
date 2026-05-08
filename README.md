@@ -4,6 +4,22 @@
 
 A magical TypeScript utility belt for Azure Functions developers who are tired of writing the same boilerplate code over and over again. This library will make your functions more readable, maintainable, and less prone to "It works on my machine" syndrome.
 
+## 📑 Table of Contents
+
+- [Installation](#-installation)
+- [Migrating from v1 to v2](#-migrating-from-v1-to-v2)
+- [Features](#-features)
+  - [Function Chains](#-function-chains)
+  - [Guards](#️-guards)
+  - [Input Bindings](#-input-bindings)
+  - [HTTP Streaming](#-http-streaming)
+  - [Query Parameters](#-query-parameters)
+  - [Keep-Alive Timer](#-keep-alive-timer)
+- [Why Use This Library?](#-why-use-this-library)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
+
 ## 🚀 Installation
 
 ```bash
@@ -19,6 +35,66 @@ yarn add azure-functions-essentials @azure/functions@latest
 > [!IMPORTANT]
 > This package requires `@azure/functions@4.11.0` or newer as a peer dependency.
 
+## 🔄 Migrating from v1 to v2
+
+v2 makes the chain architecture generic for **all Azure Functions trigger types**. This is a breaking change — here's what you need to update.
+
+### Quick-reference rename table
+
+| v1 | v2 | Notes |
+|----|-----|-------|
+| `startChain()` | `startHttpChain()` | HTTP-specific chain with `parseBody()` |
+| `guard((req, ctx) => ...)` | `guard(({ triggerData, context }) => ...)` | Single-arg `chainData` object |
+| `.handle((req, ctx) => ...)` | `.handle((triggerData, context) => ...)` | Same for 2-arg handlers |
+| `.handle((req, body, ctx) => ...)` | `.handle((triggerData, parsedData, context) => ...)` | 3-arg handlers after `parseBody()` |
+| `ParsedBodyChain` | `ParsedDataChain` | Generic data parsing, not HTTP-only |
+| `{ request, context }` in chain data | `{ triggerData, context }` | Renamed for trigger-agnostic naming |
+| `{ body }` in parsed chain data | `{ parsedData }` | Renamed for clarity |
+
+### Before (v1)
+
+```typescript
+import { startChain, guard, funcResult } from 'azure-functions-essentials';
+
+const myGuard = guard((req, ctx) => {
+  return req.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nope');
+});
+
+app.post('my-endpoint', {
+  handler: startChain()
+    .useGuard(myGuard)
+    .parseBody(mySchema)
+    .useInputBinding(({ body }) => myInput.create(body.id))
+    .handle((req, body, ctx) => funcResult('OK', body)),
+});
+```
+
+### After (v2)
+
+```typescript
+import { startHttpChain, guard, funcResult } from 'azure-functions-essentials';
+
+const myGuard = guard(({ triggerData }) => {
+  return triggerData.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nope');
+});
+
+app.post('my-endpoint', {
+  handler: startHttpChain()
+    .useGuard(myGuard)
+    .parseBody(mySchema)
+    .useInputBinding(({ parsedData }) => myInput.create(parsedData.id))
+    .handle((triggerData, parsedData, context) => funcResult('OK', parsedData)),
+});
+```
+
+### What's new in v2
+
+- **`startMessageChain<T>(zodSchema?)`** — Service Bus, Event Hub, and other message triggers
+- **`startTimerChain()`** — Timer triggers
+- **`startMcpChain(zodSchema?)`** — MCP tool triggers
+- **`startGenericChain<T>(options?)`** — Fully generic escape hatch for any trigger type
+- **Generic guards** — `Guard<HttpRequest>` only compiles on HTTP chains, `Guard` (no type arg) works everywhere
+
 ## ✨ Features
 
 ### 🔗 Function Chains
@@ -27,26 +103,28 @@ Chain your function logic like a boss.
 Found a guard or an input that should be reused in other functions?
 Declare as a const and reuse the logic!
 
+Chains support **any Azure Functions trigger type** — HTTP, Service Bus, Timer, Event Hub, MCP tools, and more.
+
 ```typescript
-import { startChain, guard, funcResult, inputFactory } from 'azure-functions-essentials';
+import { startHttpChain, guard, funcResult, inputFactory } from 'azure-functions-essentials';
 
 // Create an input binding for user lookup with your fancy database call
 const userLookup = inputFactory<string, User>('user', userId => getUserFromDatabase(userId));
 
 // Make sure they have the magic password
-const keyGuard = guard(req => req.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nice try, hacker!'));
+const keyGuard = guard(({ triggerData }) => triggerData.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nice try, hacker!'));
 
 // Make sure the user is a ninja (Guard functor pattern)
 const ninjaGuard = (user: User) => guard(() => user.isNinja || funcResult('Forbidden', 'Only 🥷s are allowed!'));
 
 app.post('super-secret-endpoint', {
-  handler: startChain()
+  handler: startHttpChain()
     .useGuard(keyGuard) // Use a guard (or several?)
     .parseBody(myZodSchema) // Parse the body and (optionally) validate with Zod
-    .useInputBinding(({ body }) => userLookup.create(body.user.id)) // Initialize the input
+    .useInputBinding(({ parsedData }) => userLookup.create(parsedData.user.id)) // Initialize the input
     .useGuard(({ context }) => ninjaGuard(userLookup.get(context))) // Use input results in the chain
     // Handle the request with all goodies available
-    .handle((req, body, ctx) => {
+    .handle((triggerData, parsedData, ctx) => {
       const user = userLookup.get(ctx); // Get the user from our input
 
       // Your incredibly important business logic here
@@ -55,10 +133,37 @@ app.post('super-secret-endpoint', {
       return funcResult('OK', {
         message: `You're in ${user.name}! Here's your cookie 🍪`,
         userData: user,
-        requestData: body,
+        requestData: parsedData,
       });
     }),
 });
+```
+
+#### Non-HTTP Chains
+
+```typescript
+import { startMessageChain, startTimerChain, startMcpChain } from 'azure-functions-essentials';
+import { z } from 'zod';
+
+// Service Bus with Zod validation — throws ZodError if invalid
+const messageSchema = z.object({ orderId: z.string(), amount: z.number() });
+const messageHandler = startMessageChain(messageSchema)
+  .handle((triggerData, context) => {
+    // triggerData is typed as { orderId: string, amount: number }
+    context.log(`Processing order ${triggerData.orderId}`);
+  });
+
+// Timer trigger
+const timerHandler = startTimerChain()
+  .handle((triggerData, context) => {
+    context.log(`Timer fired: ${triggerData.isPastDue}`);
+  });
+
+// MCP tool trigger with parsed arguments
+const mcpHandler = startMcpChain(myArgsSchema)
+  .handle((triggerData, parsedData, context) => {
+    return { result: 'Tool executed', data: parsedData };
+  });
 ```
 
 ### 🛡️ Guards
@@ -68,8 +173,8 @@ app.post('super-secret-endpoint', {
 Keep the bad guys out:
 
 ```typescript
-const isAdminGuard = guard((req, ctx) => {
-  const user = ctx.extraInputs.get('user');
+const isAdminGuard = guard(({ context }) => {
+  const user = context.extraInputs.get('user');
   return user.role === 'admin' || funcResult('Forbidden', 'You shall not pass! 🧙‍♂️');
 });
 ```
@@ -85,7 +190,7 @@ const userLookup = inputFactory<string, User>('user', async userId => {
 });
 
 // Later in your chain...
-.useInputBinding(({ request }) => userLookup.create(request.params.userId))
+.useInputBinding(({ triggerData }) => userLookup.create(triggerData.params.userId))
 ```
 
 ### 🌊 HTTP Streaming
@@ -187,15 +292,15 @@ Guards can directly check headers, query parameters, or any request property:
 
 ```typescript
 // Simple header-based authentication guard
-const apiKeyGuard = guard((req, ctx) => {
-  const apiKey = req.headers.get('x-api-key');
+const apiKeyGuard = guard<HttpRequest>(({ triggerData, context }) => {
+  const apiKey = triggerData.headers.get('x-api-key');
   return apiKey === process.env.API_KEY || funcResult('Unauthorized', 'Invalid API key');
 });
 
 // Usage in chain
-startChain()
+startHttpChain()
   .useGuard(apiKeyGuard)
-  .handle((req, ctx) => {
+  .handle((triggerData, ctx) => {
     // Only executed if API key is valid
     return funcResult('OK', 'Access granted!');
   });
@@ -209,15 +314,15 @@ Guards can also be created on-the-fly with the functor pattern, allowing you to 
 type BodyType = { name: string; age: number };
 
 // Guard factory that validates a specific property in the body
-const validateBody = (body: BodyType) => guard((req, ctx) => body.age < 18 || funcResult('BadRequest', `Age must be at least 18 years old`));
+const validateBody = (parsedData: BodyType) => guard(() => parsedData.age >= 18 || funcResult('BadRequest', `Age must be at least 18 years old`));
 
 // Usage with parsed body
-startChain()
+startHttpChain()
   .parseBody<BodyType>()
-  .useGuard(({ body }) => validateBody(body)) // Pass the body to validateBody
-  .handle((req, body, ctx) => {
+  .useGuard(({ parsedData }) => validateBody(parsedData)) // Pass the parsed data to validateBody
+  .handle((triggerData, parsedData, ctx) => {
     // Only executed if the body validator is passed
-    return funcResult('OK', `Welcome, ${body.name}!`);
+    return funcResult('OK', `Welcome, ${parsedData.name}!`);
   });
 ```
 
@@ -239,10 +344,10 @@ const userSchema = z.object({
   age: z.number().min(18).optional(),
 });
 
-startChain()
+startHttpChain()
   .parseBody(userSchema)
-  .handle((req, body, ctx) => {
-    // body is typed and validated!
+  .handle((triggerData, parsedData, ctx) => {
+    // parsedData is typed and validated!
   });
 ```
 

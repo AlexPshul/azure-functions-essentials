@@ -15,7 +15,7 @@ const notFoundError = (input: string | FunctionInput) => {
  * @returns A boolean indicating whether the input exists.
  */
 export const validateInputExistsGuard = (input: string | FunctionInput, failOnEmptyArray = true) =>
-  guard((_, context) => {
+  guard(({ context }) => {
     const inputResult = context.extraInputs.get(input);
 
     if (inputResult === undefined || inputResult === null) return notFoundError(input);
