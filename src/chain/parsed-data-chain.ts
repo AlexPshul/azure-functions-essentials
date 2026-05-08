@@ -35,7 +35,7 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
   TResponseType
 > {
   constructor(
-    private readonly dataAccessor: (chainData: BasicChainData<TTriggerData>) => Promise<TData>,
+    private readonly dataAccessor: (chainData: BasicChainData<TTriggerData>) => Promise<TData> | TData,
     private readonly zodType: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>> | undefined,
     options: ChainOptions<TResponseType> = { responseType: 'http' as TResponseType },
   ) {

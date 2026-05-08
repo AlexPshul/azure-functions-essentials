@@ -1,7 +1,5 @@
-import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { ParsedDataChain } from '../parsed-data-chain';
-import { BasicChainData } from '../types';
 
 /**
  * Initializes a new MCP chain for MCP tool triggers.
@@ -16,9 +14,7 @@ export function startMcpChain<TArgs>(): ParsedDataChain<unknown, TArgs, 'json'>;
  */
 export function startMcpChain<TArgs>(zodSchema: ZodType<TArgs>): ParsedDataChain<unknown, TArgs, 'json'>;
 export function startMcpChain<TArgs>(zodSchema?: ZodType<TArgs>) {
-  const dataAccessor = async (chainData: BasicChainData) => {
-    const context = chainData.context as InvocationContext & { triggerMetadata?: Record<string, unknown> };
-    return context.triggerMetadata?.mcptoolargs as TArgs;
-  };
-  return new ParsedDataChain<unknown, TArgs, 'json'>(dataAccessor, zodSchema, { responseType: 'json' });
+  return new ParsedDataChain<unknown, TArgs, 'json'>(({ context }) => context.triggerMetadata?.mcptoolargs as TArgs, zodSchema, {
+    responseType: 'json',
+  });
 }
