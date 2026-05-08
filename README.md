@@ -4,6 +4,22 @@
 
 A magical TypeScript utility belt for Azure Functions developers who are tired of writing the same boilerplate code over and over again. This library will make your functions more readable, maintainable, and less prone to "It works on my machine" syndrome.
 
+## 📑 Table of Contents
+
+- [Installation](#-installation)
+- [Migrating from v1 to v2](#-migrating-from-v1-to-v2)
+- [Features](#-features)
+  - [Function Chains](#-function-chains)
+  - [Guards](#️-guards)
+  - [Input Bindings](#-input-bindings)
+  - [HTTP Streaming](#-http-streaming)
+  - [Query Parameters](#-query-parameters)
+  - [Keep-Alive Timer](#-keep-alive-timer)
+- [Why Use This Library?](#-why-use-this-library)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
+
 ## 🚀 Installation
 
 ```bash
@@ -18,6 +34,66 @@ yarn add azure-functions-essentials @azure/functions@latest
 
 > [!IMPORTANT]
 > This package requires `@azure/functions@4.11.0` or newer as a peer dependency.
+
+## 🔄 Migrating from v1 to v2
+
+v2 makes the chain architecture generic for **all Azure Functions trigger types**. This is a breaking change — here's what you need to update.
+
+### Quick-reference rename table
+
+| v1 | v2 | Notes |
+|----|-----|-------|
+| `startChain()` | `startHttpChain()` | HTTP-specific chain with `parseBody()` |
+| `guard((req, ctx) => ...)` | `guard(({ triggerData, context }) => ...)` | Single-arg `chainData` object |
+| `.handle((req, ctx) => ...)` | `.handle((triggerData, context) => ...)` | Same for 2-arg handlers |
+| `.handle((req, body, ctx) => ...)` | `.handle((triggerData, parsedData, context) => ...)` | 3-arg handlers after `parseBody()` |
+| `ParsedBodyChain` | `ParsedDataChain` | Generic data parsing, not HTTP-only |
+| `{ request, context }` in chain data | `{ triggerData, context }` | Renamed for trigger-agnostic naming |
+| `{ body }` in parsed chain data | `{ parsedData }` | Renamed for clarity |
+
+### Before (v1)
+
+```typescript
+import { startChain, guard, funcResult } from 'azure-functions-essentials';
+
+const myGuard = guard((req, ctx) => {
+  return req.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nope');
+});
+
+app.post('my-endpoint', {
+  handler: startChain()
+    .useGuard(myGuard)
+    .parseBody(mySchema)
+    .useInputBinding(({ body }) => myInput.create(body.id))
+    .handle((req, body, ctx) => funcResult('OK', body)),
+});
+```
+
+### After (v2)
+
+```typescript
+import { startHttpChain, guard, funcResult } from 'azure-functions-essentials';
+
+const myGuard = guard(({ triggerData }) => {
+  return triggerData.headers.get('x-api-key') === 'secret' || funcResult('Forbidden', 'Nope');
+});
+
+app.post('my-endpoint', {
+  handler: startHttpChain()
+    .useGuard(myGuard)
+    .parseBody(mySchema)
+    .useInputBinding(({ parsedData }) => myInput.create(parsedData.id))
+    .handle((triggerData, parsedData, context) => funcResult('OK', parsedData)),
+});
+```
+
+### What's new in v2
+
+- **`startMessageChain<T>(zodSchema?)`** — Service Bus, Event Hub, and other message triggers
+- **`startTimerChain()`** — Timer triggers
+- **`startMcpChain(zodSchema?)`** — MCP tool triggers
+- **`startGenericChain<T>(options?)`** — Fully generic escape hatch for any trigger type
+- **Generic guards** — `Guard<HttpRequest>` only compiles on HTTP chains, `Guard` (no type arg) works everywhere
 
 ## ✨ Features
 
