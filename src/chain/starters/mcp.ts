@@ -14,7 +14,5 @@ export function startMcpChain<TArgs>(): ParsedDataChain<unknown, TArgs, 'json'>;
  */
 export function startMcpChain<TArgs>(zodSchema: ZodType<TArgs>): ParsedDataChain<unknown, TArgs, 'json'>;
 export function startMcpChain<TArgs>(zodSchema?: ZodType<TArgs>) {
-  return new ParsedDataChain<unknown, TArgs, 'json'>(({ context }) => context.triggerMetadata?.mcptoolargs as TArgs, zodSchema, {
-    responseType: 'json',
-  });
+  return new ParsedDataChain(({ context }) => context.triggerMetadata?.mcptoolargs as TArgs, zodSchema, { responseType: 'json' });
 }
