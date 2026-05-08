@@ -3,6 +3,10 @@ import { BaseChain, funcResult, guard, inputFactory } from '../../src';
 
 // Create a concrete implementation of the abstract BaseChain for testing
 class TestChain extends BaseChain<{ triggerData: HttpRequest; context: InvocationContext }> {
+  constructor() {
+    super({ responseType: 'http' });
+  }
+
   public async runChain(triggerData: HttpRequest, context: InvocationContext) {
     return this.executeChain({ triggerData, context });
   }

@@ -4,6 +4,10 @@ import { BasicChainData } from '../../../src/chain/types';
 
 // Create a concrete implementation of the abstract BaseChain for testing
 class TestChain extends BaseChain<BasicChainData<HttpRequest>> {
+  constructor() {
+    super({ responseType: 'http' });
+  }
+
   public async runChain(triggerData: HttpRequest, context: InvocationContext) {
     return this.executeChain({ triggerData, context });
   }
