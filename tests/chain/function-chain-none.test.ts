@@ -1,7 +1,7 @@
 import { InvocationContext } from '@azure/functions';
-import { RegularChain, guard } from '../../src';
+import { FunctionChain, guard } from '../../src';
 
-describe('RegularChain with responseType none', () => {
+describe('FunctionChain with responseType none', () => {
   let mockContext: InvocationContext;
 
   beforeEach(() => {
@@ -10,15 +10,15 @@ describe('RegularChain with responseType none', () => {
     mockContext.error = jest.fn();
   });
 
-  it('should call handler with triggerData and context', async () => {
+  it('should call handler with chainData', async () => {
     const triggerData = { message: 'hello' };
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' });
+    const chain = new FunctionChain<typeof triggerData>({ responseType: 'none' });
     const handler = chain.handle(handlerFn);
     await handler(triggerData, mockContext);
 
-    expect(handlerFn).toHaveBeenCalledWith(triggerData, mockContext);
+    expect(handlerFn).toHaveBeenCalledWith({ triggerData, context: mockContext });
   });
 
   it('should throw Error when guard fails', async () => {
@@ -26,7 +26,7 @@ describe('RegularChain with responseType none', () => {
     const failingGuard = guard(() => false);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(failingGuard);
+    const chain = new FunctionChain<typeof triggerData>({ responseType: 'none' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
 
     await expect(handler(triggerData, mockContext)).rejects.toThrow(Error);
@@ -38,7 +38,7 @@ describe('RegularChain with responseType none', () => {
     const failingGuard = guard(() => false);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(failingGuard);
+    const chain = new FunctionChain<typeof triggerData>({ responseType: 'none' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
 
     await expect(handler(triggerData, mockContext)).rejects.toThrow('Chain guard #0 failed.');
@@ -48,7 +48,7 @@ describe('RegularChain with responseType none', () => {
     const triggerData = { message: 'hello' };
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' });
+    const chain = new FunctionChain<typeof triggerData>({ responseType: 'none' });
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
@@ -60,7 +60,7 @@ describe('RegularChain with responseType none', () => {
     const guardCheck = jest.fn().mockReturnValue(true);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'none'>({ responseType: 'none' }).useGuard(guard(guardCheck));
+    const chain = new FunctionChain<typeof triggerData>({ responseType: 'none' }).useGuard(guard(guardCheck));
     const handler = chain.handle(handlerFn);
     await handler(triggerData, mockContext);
 

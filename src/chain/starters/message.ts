@@ -1,20 +1,25 @@
 import { ZodType } from 'zod';
-import { RegularChain } from '../regular-chain';
-import { ValidatedChain } from '../specialized';
+import { FunctionChain } from '../function-chain';
+import { zodTransformer } from '../transformers';
+import { BasicChainData } from '../types';
 
 /**
  * Initializes a new message chain for message-based triggers (Service Bus, Event Hub, etc.).
  * Without a Zod schema, the type is trusted (no validation).
- * @returns A `RegularChain<T, 'none'>`
+ * @returns A `FunctionChain<T>`
  */
-export function startMessageChain<T>(): RegularChain<T, 'none'>;
+export function startMessageChain<T>(): FunctionChain<T>;
 /**
  * Initializes a new validated message chain for message-based triggers.
- * With a Zod schema, the raw trigger data is validated before guards and handler.
+ * With a Zod schema, the raw trigger data is validated via a Transformer before guards and handler.
  * @param zodSchema - The Zod schema to validate the trigger data
- * @returns A `ValidatedChain<T, 'none'>`
+ * @returns A `FunctionChain` with validated data available as `parsedData`
  */
-export function startMessageChain<T>(zodSchema: ZodType<T>): ValidatedChain<T, 'none'>;
-export function startMessageChain<T>(zodSchema?: ZodType<T>): RegularChain<T, 'none'> | ValidatedChain<T, 'none'> {
-  return zodSchema ? new ValidatedChain(zodSchema, { responseType: 'none' }) : new RegularChain<T>({ responseType: 'none' });
+export function startMessageChain<T>(
+  zodSchema: ZodType<T>,
+): FunctionChain<unknown, 'none', BasicChainData & { parsedData: T }>;
+export function startMessageChain<T>(zodSchema?: ZodType<T>) {
+  const chain = new FunctionChain<unknown>({ responseType: 'none' });
+  if (zodSchema) return chain.useTransformer(zodTransformer(zodSchema));
+  return chain as FunctionChain<T>;
 }

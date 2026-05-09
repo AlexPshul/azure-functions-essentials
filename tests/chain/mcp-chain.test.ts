@@ -26,7 +26,7 @@ describe('startMcpChain', () => {
     const handler = startMcpChain<typeof args>().handle(handlerFn);
     const result = await handler(undefined as unknown, context);
 
-    expect(handlerFn).toHaveBeenCalledWith(undefined, args, context);
+    expect(handlerFn).toHaveBeenCalledWith(expect.objectContaining({ parsedData: args }));
     expect(result).toEqual({ result: 'done' });
   });
 
@@ -39,11 +39,11 @@ describe('startMcpChain', () => {
     const handler = startMcpChain(schema).handle(handlerFn);
     const result = await handler(undefined as unknown, context);
 
-    expect(handlerFn).toHaveBeenCalledWith(undefined, args, context);
+    expect(handlerFn).toHaveBeenCalledWith(expect.objectContaining({ parsedData: args }));
     expect(result).toEqual({ result: 'validated' });
   });
 
-  it('should return ZodError when args fail validation', async () => {
+  it('should return ChainFailure when args fail validation', async () => {
     const schema = z.object({ name: z.string(), value: z.number() });
     const invalidArgs = { name: 123, value: 'not a number' };
     const context = createMcpContext(invalidArgs);
@@ -53,6 +53,7 @@ describe('startMcpChain', () => {
     const result = await handler(undefined as unknown, context);
 
     expect(result).toBeDefined();
+    expect(result).toHaveProperty('linkType', 'transformer');
     expect(handlerFn).not.toHaveBeenCalled();
   });
 
@@ -86,7 +87,7 @@ describe('startMcpChain', () => {
     const args = { query: 'hello' };
     const context = createMcpContext(args);
 
-    const handler = startMcpChain<typeof args>().handle((_triggerData, parsedData) => {
+    const handler = startMcpChain<typeof args>().handle(({ parsedData }) => {
       return { answer: `You said: ${parsedData.query}` };
     });
     const result = await handler(undefined as unknown, context);
