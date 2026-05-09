@@ -7,7 +7,7 @@ A middleware-style chain library for Azure Functions v4 (Node.js). Provides a co
 ### Chain
 
 **Chain**:
-A composable execution pipeline that runs guards and input bindings before invoking a handler. The generic base is `RegularChain`.
+A composable execution pipeline that runs guards, transformers, and input bindings before invoking a handler. The concrete class is `FunctionChain`.
 _Avoid_: Middleware, pipeline
 
 **Guard**:
@@ -27,7 +27,11 @@ A `'http' | 'json' | 'none'` discriminator on a chain that controls two behavior
 _Avoid_: ErrorMode, returnType
 
 **ChainFailure**:
-A structured object describing a guard or input-binding failure. Contains the HTTP result, link index, and link type. Returned as a value on `'json'` chains, used to construct the thrown `Error` message on `'none'` chains.
+A structured object describing a guard, transformer, or input-binding failure. Contains the HTTP result, link index, and link type. Returned as a value on `'json'` chains, used to construct the thrown `Error` message on `'none'` chains.
+
+**Transformer**:
+A chain link that takes the current chain data and returns either enriched chain data (extending `BasicChainData`) on success or `{ error: HttpResponseInit }` on failure. Used for parsing, validation, data extraction, and any operation that widens the chain data shape.
+_Avoid_: Parser, mapper, middleware
 
 **InputBinding**:
 A chain link that fetches and stores data in the invocation context before the handler runs.
@@ -35,21 +39,15 @@ A chain link that fetches and stores data in the invocation context before the h
 ### Specialized Chains
 
 **HttpChain**:
-A chain specialized for HTTP triggers. Extends `RegularChain<HttpRequest, 'http'>` and adds `parseBody()`.
-
-**ValidatedChain**:
-A chain that validates raw trigger data against a Zod schema before running guards or the handler. Throws `ZodError` on validation failure. Used for message-based triggers where the trigger data is the message payload.
-
-**ParsedDataChain**:
-A chain that extracts parsed data from trigger data using a configurable data accessor. The handler receives three arguments: `(triggerData, parsedData, context)`.
+A chain specialized for HTTP triggers. Extends `FunctionChain<HttpRequest, 'http'>` and adds `parseBody()`, which internally adds a body-extraction transformer.
 
 ## Relationships
 
-- A **Chain** has zero or more **Guards** and zero or more **InputBindings**
+- A **Chain** has zero or more **Guards**, zero or more **Transformers**, and zero or more **InputBindings**
 - A **Guard** is generic over **TriggerData** — `Guard<unknown>` is usable on any chain
-- An **HttpChain** can produce a **ParsedDataChain** via `parseBody()`
-- A **ValidatedChain** validates **TriggerData** against a Zod schema before the chain runs
-- **ResponseType** determines whether guard failures produce HTTP responses, returned **ChainFailures**, or thrown errors
+- A **Transformer** widens the chain data shape — links added after a transformer see the enriched type
+- An **HttpChain** adds a body-extraction **Transformer** via `parseBody()`
+- **ResponseType** determines whether link failures produce HTTP responses, returned **ChainFailures**, or thrown errors
 
 ## Example dialogue
 
@@ -59,10 +57,14 @@ A chain that extracts parsed data from trigger data using a configurable data ac
 > **Dev:** "Can I use a header guard on a timer chain?"
 > **Domain expert:** "No — `headerGuard` returns a `Guard<HttpRequest>`, and a timer chain expects `Guard<Timer>`. TypeScript will catch that at compile time."
 
-> **Dev:** "What's the difference between **ValidatedChain** and **ParsedDataChain**?"
-> **Domain expert:** "**ValidatedChain** is for when the **TriggerData** IS the message — it validates and types it in place (2-arg handler). **ParsedDataChain** is for when you need to extract **ParsedData** from the **TriggerData** (3-arg handler)."
+> **Dev:** "What if I want to validate trigger data with Zod on a message chain?"
+> **Domain expert:** "Add a **Transformer** — `useTransformer(zodTransformer(schema))`. It validates and types the data as a chain link, so you can reorder it relative to **Guards**. If validation fails, the **Transformer** returns an error that flows through `handleFailure()` just like any other link failure."
+
+> **Dev:** "Why does the handler take a single `chainData` object instead of `(triggerData, context)`?"
+> **Domain expert:** "Because **Transformers** can enrich the chain data with new properties. A single object lets the type widen naturally — after `parseBody()`, the handler sees `{ triggerData, context, parsedData }` without changing the handler arity."
 
 ## Flagged ambiguities
 
 - "request" was used to mean both the HTTP request object and generic trigger data — resolved: use **TriggerData** for the generic concept, reserve "request" for `HttpRequest` specifically.
 - "body" was used to mean both the HTTP request body and any parsed data — resolved: use **ParsedData** generically, keep "body" only in `HttpChain.parseBody()`.
+- "parse" was considered as the third chain link type name — resolved: use **Transformer** because parsing is just one use case; the concept is broader (validation, data extraction, any chain data enrichment).
