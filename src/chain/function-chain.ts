@@ -45,6 +45,10 @@ export class FunctionChain<
     return this.chainLinks.length;
   }
 
+  protected get indexOffset(): number {
+    return 0;
+  }
+
   public useGuard(guard: Guard<TChainData['triggerData']>): this;
   public useGuard(guardFunc: LinkFunctor<TChainData, Guard<TChainData['triggerData']>>): this;
   public useGuard(guard: Guard<TChainData['triggerData']> | LinkFunctor<TChainData, Guard<TChainData['triggerData']>>): this {
@@ -95,8 +99,7 @@ export class FunctionChain<
     handler: ChainHandlerFor<TResponseType, TChainData, TResultBody>,
   ): ChainWrapper<TTriggerData, TResponseType, TResultBody> {
     return (async (triggerData: TTriggerData, context: InvocationContext) => {
-      const initialChainData = { triggerData, context };
-      const chainResult = await this.executeChain(initialChainData);
+      const chainResult = await this.executeChain({ triggerData, context } as TChainData);
 
       if (isChainFailure(chainResult)) return this.handleFailure(chainResult);
 
@@ -105,16 +108,15 @@ export class FunctionChain<
     }) as ChainWrapper<TTriggerData, TResponseType, TResultBody>;
   }
 
-  public async executeChain(chainData: BasicChainData<TTriggerData>, indexOffset = 0): Promise<TChainData | ChainFailure> {
-    const currentData = chainData as TChainData;
-    const { context } = currentData;
+  public async executeChain(chainData: TChainData): Promise<TChainData | ChainFailure> {
+    const { context } = chainData;
 
     for (const [index, link] of this.chainLinks.entries()) {
-      const globalIndex = indexOffset + index;
+      const globalIndex = this.indexOffset + index;
       try {
         switch (link.type) {
           case 'guard': {
-            const linkResult: ChainLinkResult = await link.functor(currentData).check(currentData);
+            const linkResult: ChainLinkResult = await link.functor(chainData).check(chainData);
             if (linkResult !== true) {
               const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
               context.error(`Link #${globalIndex} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
@@ -123,7 +125,7 @@ export class FunctionChain<
             break;
           }
           case 'inputBinding': {
-            const linkResult: ChainLinkResult = await link.functor(currentData).set(context);
+            const linkResult: ChainLinkResult = await link.functor(chainData).set(context);
             if (linkResult !== true) {
               const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
               context.error(`Link #${globalIndex} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
@@ -141,7 +143,7 @@ export class FunctionChain<
       }
     }
 
-    return currentData;
+    return chainData;
   }
 
   protected handleFailure(failure: ChainFailure) {
@@ -185,11 +187,15 @@ export class TransformedChain<
     return this.chainLinks.length + this.sourceChain.linkCount + 1;
   }
 
-  public override async executeChain(chainData: BasicChainData<TTriggerData>, indexOffset = 0): Promise<TChainData | ChainFailure> {
-    const previousResult = await this.sourceChain.executeChain(chainData);
+  protected override get indexOffset(): number {
+    return this.sourceChain.linkCount + 1;
+  }
+
+  public override async executeChain(chainData: BasicChainData<TTriggerData>): Promise<TChainData | ChainFailure> {
+    const previousResult = await this.sourceChain.executeChain(chainData as TPreviousChainData);
     if (isChainFailure(previousResult)) return previousResult;
 
-    const transformerIndex = indexOffset + this.sourceChain.linkCount;
+    const transformerIndex = this.sourceChain.linkCount;
     try {
       const transformResult = await this.transformer.transform(previousResult);
       if (!isTransformerSuccess(transformResult)) {
@@ -197,7 +203,7 @@ export class TransformedChain<
         return { result: transformResult.error, linkIndex: transformerIndex, linkType: 'transformer' };
       }
 
-      return super.executeChain(transformResult, this.sourceChain.linkCount + 1);
+      return super.executeChain(transformResult);
     } catch (error) {
       const linkError = defaultErrors.transformer;
       chainData.context.error(
