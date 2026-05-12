@@ -224,27 +224,76 @@ describe('FunctionChain', () => {
 
       expect(guardCheck).toHaveBeenCalledWith({ role: 'admin' });
     });
-  });
 
-  describe('copyFromChain', () => {
-    it('should copy chain links from another chain with mapping', async () => {
-      const testInput = inputFactory<string, string>('test', async data => data.toUpperCase());
-      const sourceChain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' })
+    it('should report correct global link indices across linked chains', async () => {
+      type HttpChainData = BasicChainData<HttpRequest>;
+      const enrichTransformer = transformer<HttpChainData, HttpChainData & { extra: string }>(chainData => ({
+        ...chainData,
+        extra: 'enriched',
+      }));
+      const handlerFn = jest.fn();
+
+      // Chain A: 2 guards (indices 0, 1)
+      // Transformer link (index 2)
+      // Chain B: 1 guard that fails (index 3)
+      const chain = new FunctionChain<HttpRequest, 'json'>({ responseType: 'json' })
         .useGuard(guard(() => true))
-        .useInputBinding(testInput.create('source'));
+        .useGuard(guard(() => true))
+        .useTransformer(enrichTransformer)
+        .useGuard(guard(() => false));
 
-      const targetChain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' });
+      const handler = chain.handle(handlerFn);
+      const result = await handler(mockTriggerData, mockContext);
 
-      const mapFn = jest.fn(targetData => ({ ...targetData, extraProp: 'mapped' }));
+      expect(handlerFn).not.toHaveBeenCalled();
+      expect(result).toHaveProperty('linkIndex', 3);
+      expect(result).toHaveProperty('linkType', 'guard');
+    });
 
-      const result = targetChain.copyFromChain(sourceChain, mapFn);
+    it('should report correct link index when previous chain guard fails', async () => {
+      type HttpChainData = BasicChainData<HttpRequest>;
+      const enrichTransformer = transformer<HttpChainData, HttpChainData & { extra: string }>(chainData => ({
+        ...chainData,
+        extra: 'enriched',
+      }));
+      const handlerFn = jest.fn();
 
-      const handler = targetChain.handle(() => funcResult('OK'));
+      // Chain A: guard pass (index 0), guard fail (index 1)
+      // Transformer never reached
+      const chain = new FunctionChain<HttpRequest, 'json'>({ responseType: 'json' })
+        .useGuard(guard(() => true))
+        .useGuard(guard(() => false))
+        .useTransformer(enrichTransformer);
+
+      const handler = chain.handle(handlerFn);
+      const result = await handler(mockTriggerData, mockContext);
+
+      expect(handlerFn).not.toHaveBeenCalled();
+      expect(result).toHaveProperty('linkIndex', 1);
+      expect(result).toHaveProperty('linkType', 'guard');
+    });
+
+    it('should execute previous chain guards before transformer', async () => {
+      type HttpChainData = BasicChainData<HttpRequest>;
+      const preGuardCheck = jest.fn().mockReturnValue(true);
+      const enrichTransformer = transformer<HttpChainData, HttpChainData & { extra: string }>(chainData => ({
+        ...chainData,
+        extra: 'enriched',
+      }));
+      const postGuardCheck = jest.fn().mockReturnValue(true);
+      const handlerFn = jest.fn().mockReturnValue(funcResult('OK'));
+
+      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' })
+        .useGuard(guard(preGuardCheck))
+        .useTransformer(enrichTransformer)
+        .useGuard(guard(postGuardCheck));
+
+      const handler = chain.handle(handlerFn);
       await handler(mockTriggerData, mockContext);
 
-      expect(result).toBe(targetChain);
-      expect(mapFn).toHaveBeenCalled();
-      expect(testInput.get(mockContext)).toBe('SOURCE');
+      expect(preGuardCheck).toHaveBeenCalled();
+      expect(postGuardCheck).toHaveBeenCalled();
+      expect(handlerFn).toHaveBeenCalled();
     });
   });
 });

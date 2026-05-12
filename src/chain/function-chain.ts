@@ -29,14 +29,24 @@ const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(
 const isTransformerSuccess = (result: unknown): result is BasicChainData =>
   typeof result === 'object' && result !== null && 'triggerData' in result;
 
+type PreviousChain = {
+  executeChain: (chainData: BasicChainData) => Promise<BasicChainData | ChainFailure>;
+  linkCount: number;
+};
+
 export class FunctionChain<
   TTriggerData = unknown,
   TResponseType extends ResponseType = 'none',
   TChainData extends BasicChainData<TTriggerData> = BasicChainData<TTriggerData>,
 > {
   protected chainLinks: ChainLink<TChainData>[] = [];
+  private previousChain: PreviousChain | undefined;
 
   constructor(protected readonly options: ChainOptions<TResponseType>) {}
+
+  public get linkCount(): number {
+    return this.chainLinks.length + (this.previousChain?.linkCount ?? 0);
+  }
 
   public useGuard(guard: Guard<TChainData['triggerData']>): this;
   public useGuard(guardFunc: LinkFunctor<TChainData, Guard<TChainData['triggerData']>>): this;
@@ -82,20 +92,12 @@ export class FunctionChain<
     transformerInstance: Transformer<TChainData, TNewChainData>,
   ): FunctionChain<TTriggerData, TResponseType, TNewChainData> {
     const newChain = new FunctionChain<TTriggerData, TResponseType, TNewChainData>(this.options);
-    newChain.pushMappedLinks(this.chainLinks, data => data as unknown as TChainData);
+    newChain.previousChain = this as unknown as PreviousChain;
     newChain.chainLinks.push({
       type: 'transformer',
       functor: data => transformerInstance.transform(data as unknown as TChainData),
     });
     return newChain;
-  }
-
-  public copyFromChain<TSourceData extends BasicChainData>(
-    sourceChain: FunctionChain<TSourceData['triggerData'], ResponseType, TSourceData>,
-    mapFunc: (data: TChainData) => TSourceData,
-  ) {
-    this.pushMappedLinks(sourceChain.chainLinks, mapFunc);
-    return this;
   }
 
   public handle<TResultBody = undefined>(
@@ -113,18 +115,29 @@ export class FunctionChain<
   }
 
   protected async executeChain(chainData: TChainData): Promise<TChainData | ChainFailure> {
-    let currentData = chainData;
-    const { context } = chainData;
+    let currentData: TChainData;
+
+    if (this.previousChain) {
+      const previousResult = await this.previousChain.executeChain(chainData);
+      if (!('triggerData' in previousResult)) return previousResult;
+      currentData = previousResult as TChainData;
+    } else {
+      currentData = chainData;
+    }
+
+    const { context } = currentData;
+    const indexOffset = this.previousChain?.linkCount ?? 0;
 
     for (const [index, link] of this.chainLinks.entries()) {
+      const globalIndex = indexOffset + index;
       try {
         switch (link.type) {
           case 'guard': {
             const linkResult: ChainLinkResult = await link.functor(currentData).check(currentData);
             if (linkResult !== true) {
               const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
-              context.error(`Link #${index} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
-              return { result: linkError, linkIndex: index, linkType: link.type };
+              context.error(`Link #${globalIndex} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
+              return { result: linkError, linkIndex: globalIndex, linkType: link.type };
             }
             break;
           }
@@ -132,16 +145,16 @@ export class FunctionChain<
             const linkResult: ChainLinkResult = await link.functor(currentData).set(context);
             if (linkResult !== true) {
               const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
-              context.error(`Link #${index} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
-              return { result: linkError, linkIndex: index, linkType: link.type };
+              context.error(`Link #${globalIndex} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
+              return { result: linkError, linkIndex: globalIndex, linkType: link.type };
             }
             break;
           }
           case 'transformer': {
             const transformResult = await link.functor(currentData);
             if (!isTransformerSuccess(transformResult)) {
-              context.error(`Link #${index} (${link.type}) stopped the chain. Result: ${JSON.stringify(transformResult.error)}`);
-              return { result: transformResult.error, linkIndex: index, linkType: link.type };
+              context.error(`Link #${globalIndex} (${link.type}) stopped the chain. Result: ${JSON.stringify(transformResult.error)}`);
+              return { result: transformResult.error, linkIndex: globalIndex, linkType: link.type };
             }
             currentData = transformResult as TChainData;
             break;
@@ -149,8 +162,10 @@ export class FunctionChain<
         }
       } catch (error) {
         const linkError = defaultErrors[link.type];
-        context.error(`Link #${index} (${link.type}) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`);
-        return { result: linkError, linkIndex: index, linkType: link.type };
+        context.error(
+          `Link #${globalIndex} (${link.type}) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`,
+        );
+        return { result: linkError, linkIndex: globalIndex, linkType: link.type };
       }
     }
 
@@ -177,14 +192,5 @@ export class FunctionChain<
       case 'none':
         return undefined;
     }
-  }
-
-  private pushMappedLinks<TSourceData extends BasicChainData>(sourceLinks: ChainLink<TSourceData>[], mapFunc: (data: TChainData) => TSourceData) {
-    const alteredSource = sourceLinks.map(link => ({
-      ...link,
-      functor: (data: TChainData) => link.functor(mapFunc(data)),
-    }));
-
-    this.chainLinks.push(...(alteredSource as ChainLink<TChainData>[]));
   }
 }
