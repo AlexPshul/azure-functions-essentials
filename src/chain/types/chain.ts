@@ -17,10 +17,6 @@ export type ChainLink<TChainData extends BasicChainData> =
   | {
       type: 'inputBinding';
       functor: LinkFunctor<TChainData, InputBindingSetter>;
-    }
-  | {
-      type: 'transformer';
-      functor: LinkFunctor<TChainData, Promisable<BasicChainData | { error: HttpResponseInit }>>;
     };
 
 export type ChainLinkResult = Promisable<HttpResponseInit | boolean>;
