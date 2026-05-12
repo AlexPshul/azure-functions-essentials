@@ -105,13 +105,8 @@ export class FunctionChain<
     }) as ChainWrapper<TTriggerData, TResponseType, TResultBody>;
   }
 
-  public async executeChain(chainData: BasicChainData<TTriggerData>): Promise<TChainData | ChainFailure> {
+  public async executeChain(chainData: BasicChainData<TTriggerData>, indexOffset = 0): Promise<TChainData | ChainFailure> {
     const currentData = chainData as TChainData;
-    return this.executeLinks(currentData, 0);
-  }
-
-  protected async executeLinks(chainData: TChainData, indexOffset: number): Promise<TChainData | ChainFailure> {
-    const currentData = chainData;
     const { context } = currentData;
 
     for (const [index, link] of this.chainLinks.entries()) {
@@ -190,19 +185,19 @@ export class TransformedChain<
     return this.chainLinks.length + this.sourceChain.linkCount + 1;
   }
 
-  public override async executeChain(chainData: BasicChainData<TTriggerData>): Promise<TChainData | ChainFailure> {
+  public override async executeChain(chainData: BasicChainData<TTriggerData>, indexOffset = 0): Promise<TChainData | ChainFailure> {
     const previousResult = await this.sourceChain.executeChain(chainData);
     if (isChainFailure(previousResult)) return previousResult;
 
-    const transformerIndex = this.sourceChain.linkCount;
-    let currentData: TChainData;
+    const transformerIndex = indexOffset + this.sourceChain.linkCount;
     try {
       const transformResult = await this.transformer.transform(previousResult);
       if (!isTransformerSuccess(transformResult)) {
         chainData.context.error(`Link #${transformerIndex} (transformer) stopped the chain. Result: ${JSON.stringify(transformResult.error)}`);
         return { result: transformResult.error, linkIndex: transformerIndex, linkType: 'transformer' };
       }
-      currentData = transformResult;
+
+      return super.executeChain(transformResult, this.sourceChain.linkCount + 1);
     } catch (error) {
       const linkError = defaultErrors.transformer;
       chainData.context.error(
@@ -210,7 +205,5 @@ export class TransformedChain<
       );
       return { result: linkError, linkIndex: transformerIndex, linkType: 'transformer' };
     }
-
-    return this.executeLinks(currentData, this.sourceChain.linkCount + 1);
   }
 }
