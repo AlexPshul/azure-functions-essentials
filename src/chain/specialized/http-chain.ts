@@ -1,7 +1,7 @@
 import { HttpRequest } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../../helpers';
-import { FunctionChain } from '../function-chain';
+import { FunctionChain, TransformedChain } from '../function-chain';
 import { transformer } from '../transformers';
 import { BasicChainData, LinkFunctor, TransformerResult } from '../types';
 
@@ -25,7 +25,7 @@ export class HttpChain extends FunctionChain<HttpRequest, 'http'> {
    */
   public parseBody<TBody>(
     zodType?: ZodType<TBody>,
-  ): FunctionChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }, BasicChainData<HttpRequest>>;
+  ): TransformedChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }, BasicChainData<HttpRequest>>;
   /**
    * Parses the body of the HTTP request using the request.json() call.
    * After this call, the parsed body will be available in the chain data as `parsedData`.
@@ -37,7 +37,7 @@ export class HttpChain extends FunctionChain<HttpRequest, 'http'> {
    */
   public parseBody<TBody>(
     zodType?: LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>,
-  ): FunctionChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }, BasicChainData<HttpRequest>>;
+  ): TransformedChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }, BasicChainData<HttpRequest>>;
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
     type ParsedHttpData = BasicChainData<HttpRequest> & { parsedData: TBody };
 

@@ -1,5 +1,5 @@
 import { ZodType } from 'zod';
-import { FunctionChain } from '../function-chain';
+import { FunctionChain, TransformedChain } from '../function-chain';
 import { zodTransformer } from '../transformers';
 import { BasicChainData } from '../types';
 
@@ -17,7 +17,7 @@ export function startMessageChain<T>(): FunctionChain<T>;
  */
 export function startMessageChain<T>(
   zodSchema: ZodType<T>,
-): FunctionChain<unknown, 'none', BasicChainData & { parsedData: T }, BasicChainData>;
+): TransformedChain<unknown, 'none', BasicChainData & { parsedData: T }, BasicChainData>;
 export function startMessageChain<T>(zodSchema?: ZodType<T>) {
   const chain = new FunctionChain<unknown>({ responseType: 'none' });
   if (zodSchema) return chain.useTransformer(zodTransformer(zodSchema));
