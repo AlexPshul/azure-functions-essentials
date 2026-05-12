@@ -28,8 +28,13 @@ const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(
 
 const isTransformerSuccess = (result: unknown): result is BasicChainData => typeof result === 'object' && result !== null && 'triggerData' in result;
 
-type ChainSource<TPreviousChainData extends BasicChainData, TChainData extends BasicChainData> = {
-  chain: { executeChain: (data: BasicChainData) => Promise<TPreviousChainData | ChainFailure>; linkCount: number };
+type ChainSource<
+  TTriggerData,
+  TResponseType extends ResponseType,
+  TPreviousChainData extends BasicChainData<TTriggerData>,
+  TChainData extends BasicChainData<TTriggerData>,
+> = {
+  chain: FunctionChain<TTriggerData, TResponseType, TPreviousChainData>;
   transformer: Transformer<TPreviousChainData, TChainData>;
 };
 
@@ -37,11 +42,11 @@ export class FunctionChain<
   TTriggerData = unknown,
   TResponseType extends ResponseType = 'none',
   TChainData extends BasicChainData<TTriggerData> = BasicChainData<TTriggerData>,
-  TPreviousChainData extends BasicChainData = never,
+  TPreviousChainData extends BasicChainData<TTriggerData> = never,
 > {
   protected chainLinks: ChainLink<TChainData>[] = [];
 
-  private source: ChainSource<TPreviousChainData, TChainData> | undefined;
+  private source: ChainSource<TTriggerData, TResponseType, TPreviousChainData, TChainData> | undefined;
 
   constructor(protected readonly options: ChainOptions<TResponseType>) {}
 
@@ -95,7 +100,7 @@ export class FunctionChain<
   ): FunctionChain<TTriggerData, TResponseType, TNewChainData, TChainData> {
     const newChain = new FunctionChain<TTriggerData, TResponseType, TNewChainData, TChainData>(this.options);
     newChain.source = {
-      chain: this as unknown as ChainSource<TChainData, TNewChainData>['chain'],
+      chain: this,
       transformer: transformerInstance,
     };
     return newChain;
@@ -105,7 +110,7 @@ export class FunctionChain<
     handler: ChainHandlerFor<TResponseType, TChainData, TResultBody>,
   ): ChainWrapper<TTriggerData, TResponseType, TResultBody> {
     return (async (triggerData: TTriggerData, context: InvocationContext) => {
-      const initialChainData = { triggerData, context } as TChainData;
+      const initialChainData = { triggerData, context };
       const chainResult = await this.executeChain(initialChainData);
 
       if (!('triggerData' in chainResult)) return this.handleFailure(chainResult as ChainFailure);
@@ -115,7 +120,7 @@ export class FunctionChain<
     }) as ChainWrapper<TTriggerData, TResponseType, TResultBody>;
   }
 
-  protected async executeChain(chainData: TChainData): Promise<TChainData | ChainFailure> {
+  protected async executeChain(chainData: BasicChainData<TTriggerData>): Promise<TChainData | ChainFailure> {
     let currentData: TChainData;
 
     if (this.source) {
@@ -138,7 +143,7 @@ export class FunctionChain<
         return { result: linkError, linkIndex: transformerIndex, linkType: 'transformer' };
       }
     } else {
-      currentData = chainData;
+      currentData = chainData as TChainData;
     }
 
     const { context } = currentData;
