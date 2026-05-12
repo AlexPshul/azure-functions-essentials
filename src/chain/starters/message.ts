@@ -17,7 +17,7 @@ export function startMessageChain<T>(): FunctionChain<T>;
  */
 export function startMessageChain<T>(
   zodSchema: ZodType<T>,
-): FunctionChain<unknown, 'none', BasicChainData & { parsedData: T }>;
+): FunctionChain<unknown, 'none', BasicChainData & { parsedData: T }, BasicChainData>;
 export function startMessageChain<T>(zodSchema?: ZodType<T>) {
   const chain = new FunctionChain<unknown>({ responseType: 'none' });
   if (zodSchema) return chain.useTransformer(zodTransformer(zodSchema));

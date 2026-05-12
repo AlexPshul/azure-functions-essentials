@@ -23,7 +23,9 @@ export class HttpChain extends FunctionChain<HttpRequest, 'http'> {
    * @param zodType - The Zod schema to use for validating the body object. (Optional)
    * @returns A variation of the Azure function handler chain that can now access the parsed body
    */
-  public parseBody<TBody>(zodType?: ZodType<TBody>): FunctionChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }>;
+  public parseBody<TBody>(
+    zodType?: ZodType<TBody>,
+  ): FunctionChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }, BasicChainData<HttpRequest>>;
   /**
    * Parses the body of the HTTP request using the request.json() call.
    * After this call, the parsed body will be available in the chain data as `parsedData`.
@@ -35,7 +37,7 @@ export class HttpChain extends FunctionChain<HttpRequest, 'http'> {
    */
   public parseBody<TBody>(
     zodType?: LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>,
-  ): FunctionChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }>;
+  ): FunctionChain<HttpRequest, 'http', BasicChainData<HttpRequest> & { parsedData: TBody }, BasicChainData<HttpRequest>>;
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
     type ParsedHttpData = BasicChainData<HttpRequest> & { parsedData: TBody };
 
