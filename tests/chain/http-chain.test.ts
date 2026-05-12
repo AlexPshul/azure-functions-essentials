@@ -1,6 +1,6 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { funcResult, guard, inputFactory, HttpChain } from '../../src';
+import { funcResult, guard, HttpChain, inputFactory } from '../../src';
 
 describe('HttpChain', () => {
   const mockRequest = {

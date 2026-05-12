@@ -44,8 +44,8 @@ export class HttpChain extends FunctionChain<HttpRequest, 'http'> {
         let rawData: TBody;
         try {
           rawData = (await chainData.triggerData.json()) as TBody;
-        } catch {
-          chainData.context.error('Failed to parse data');
+        } catch (error) {
+          chainData.context.error('Failed to parse data', error);
           return { error: funcResult('BadRequest', 'Failed to parse data') };
         }
 

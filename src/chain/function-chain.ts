@@ -105,7 +105,7 @@ export class FunctionChain<
       const initialChainData = { triggerData, context } as TChainData;
       const chainResult = await this.executeChain(initialChainData);
 
-      if ('linkIndex' in chainResult) return this.handleFailure(chainResult);
+      if (!('triggerData' in chainResult)) return this.handleFailure(chainResult as ChainFailure);
 
       const result = await handler(chainResult);
       return this.handleResult(result);
