@@ -1,3 +1,4 @@
+import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { FunctionChain } from './function-chain';
 import { ParsedDataChain } from './parsed-data-chain';
@@ -23,5 +24,9 @@ export class BasicTriggerChain<
     zodSchema?: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>>,
   ) {
     return new ParsedDataChain<TTriggerData, TData, TResponseType>(this.options, this, accessor, zodSchema);
+  }
+
+  protected prepareChain(triggerData: TTriggerData, context: InvocationContext): BasicChainData<TTriggerData> {
+    return { triggerData, context };
   }
 }

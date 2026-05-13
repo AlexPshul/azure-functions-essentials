@@ -1,4 +1,4 @@
-import { HttpRequest } from '@azure/functions';
+import { HttpRequest, InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { FunctionChain } from '../function-chain';
 import { ParsedDataChain } from '../parsed-data-chain';
@@ -15,7 +15,7 @@ export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>,
    *
    * (!) DO NOT use request.json() if you use this method.
    *
-   * @param zodType - The Zod schema to use for validating the body object. (Optional)
+   * @param zodType - The Zod schema or a function returning one, to validate the body object. (Optional)
    * @returns A ParsedDataChain with the parsed body available as `parsedData`
    */
   public parseBody<TBody>(zodType?: ZodType<TBody>): ParsedDataChain<HttpRequest, TBody, 'http'>;
@@ -25,5 +25,9 @@ export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>,
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
     const accessor = async (chainData: BasicChainData<HttpRequest>) => (await chainData.triggerData.json()) as TBody;
     return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, accessor, zodType);
+  }
+
+  protected prepareChain(triggerData: HttpRequest, context: InvocationContext): BasicChainData<HttpRequest> {
+    return { triggerData, context };
   }
 }

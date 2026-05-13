@@ -1,3 +1,4 @@
+import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
 import { defaultErrors, FunctionChain, isChainFailure } from './function-chain';
@@ -27,10 +28,11 @@ export class ParsedDataChain<
     return this.sourceChain.linkCount + 1;
   }
 
-  public override async executeChain(
-    chainData: BasicChainData<TTriggerData>,
+  protected override async prepareChain(
+    triggerData: TTriggerData,
+    context: InvocationContext,
   ): Promise<ParsedChainData<TTriggerData, TData> | ChainFailure> {
-    const sourceResult = await this.sourceChain.executeChain(chainData);
+    const sourceResult = await this.sourceChain.executeChain(triggerData, context);
     if (isChainFailure(sourceResult)) return sourceResult;
 
     const accessorIndex = this.sourceChain.linkCount;
@@ -42,7 +44,7 @@ export class ParsedDataChain<
         const zodInstance = typeof this.zodSchema === 'function' ? this.zodSchema(sourceResult) : this.zodSchema;
         const parseResult = zodInstance.safeParse(rawData);
         if (!parseResult.success) {
-          chainData.context.error('Invalid data', parseResult.error.issues);
+          context.error('Invalid data', parseResult.error.issues);
           return { result: funcResult('BadRequest', parseResult.error.issues), linkIndex: accessorIndex, linkType: 'dataAccessor' };
         }
         parsedData = parseResult.data;
@@ -50,10 +52,10 @@ export class ParsedDataChain<
         parsedData = rawData;
       }
 
-      return super.executeChain({ ...sourceResult, parsedData } as BasicChainData<TTriggerData>);
+      return { ...sourceResult, parsedData };
     } catch (error) {
       const linkError = defaultErrors.dataAccessor;
-      chainData.context.error(
+      context.error(
         `Link #${accessorIndex} (dataAccessor) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`,
       );
       return { result: linkError, linkIndex: accessorIndex, linkType: 'dataAccessor' };
