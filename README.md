@@ -41,18 +41,18 @@ v2 makes the chain architecture generic for **all Azure Functions trigger types*
 
 ### Quick-reference rename table
 
-| v1 | v2 | Notes |
-|----|-----|-------|
-| `startChain()` | `startHttpChain()` | HTTP-specific chain with `parseBody()` |
-| `guard((req, ctx) => ...)` | `guard(({ triggerData, context }) => ...)` | Single-arg `chainData` object |
-| `.handle((req, ctx) => ...)` | `.handle(({ triggerData, context }) => ...)` | Single-arg `chainData` object |
-| `.handle((req, body, ctx) => ...)` | `.handle(({ triggerData, parsedData, context }) => ...)` | `chainData` with `parsedData` after `parseBody()` |
-| `ParsedBodyChain` | `ParsedDataChain` | Generic data parsing, not HTTP-only |
-| `{ request, context }` in chain data | `{ triggerData, context }` | Renamed for trigger-agnostic naming |
-| `{ body }` in parsed chain data | `{ parsedData }` | Renamed for clarity |
-| `HttpChain` | `HttpTriggerChain` | Clearer naming |
-| `RegularChain` | `BasicTriggerChain` | Clearer naming |
-| `BaseChain` | `FunctionChain` (abstract) | Not directly instantiated |
+| v1                                   | v2                                                       | Notes                                             |
+| ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------- |
+| `startChain()`                       | `startHttpChain()`                                       | HTTP-specific chain with `parseBody()`            |
+| `guard((req, ctx) => ...)`           | `guard(({ triggerData, context }) => ...)`               | Single-arg `chainData` object                     |
+| `.handle((req, ctx) => ...)`         | `.handle(({ triggerData, context }) => ...)`             | Single-arg `chainData` object                     |
+| `.handle((req, body, ctx) => ...)`   | `.handle(({ triggerData, parsedData, context }) => ...)` | `chainData` with `parsedData` after `parseBody()` |
+| `ParsedBodyChain`                    | `ParsedDataChain`                                        | Generic data parsing, not HTTP-only               |
+| `{ request, context }` in chain data | `{ triggerData, context }`                               | Renamed for trigger-agnostic naming               |
+| `{ body }` in parsed chain data      | `{ parsedData }`                                         | Renamed for clarity                               |
+| `HttpChain`                          | `HttpTriggerChain`                                       | Clearer naming                                    |
+| `RegularChain`                       | `BasicTriggerChain`                                      | Clearer naming                                    |
+| `BaseChain`                          | `FunctionChain` (abstract)                               | Not directly instantiated                         |
 
 ### Before (v1)
 
@@ -368,5 +368,3 @@ MIT License - Use it, abuse it, but please give credit where it's due.
 <p align="center">
   <i>May your functions be stateless and your deployments be seamless!</i>
 </p>
-
-
