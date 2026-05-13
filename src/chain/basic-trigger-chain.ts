@@ -2,13 +2,15 @@ import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { FunctionChain } from './function-chain';
 import { ParsedDataChain } from './parsed-data-chain';
-import { BasicChainData, ChainOptions, DataAccessor, LinkFunctor, ResponseType } from './types';
+import { BasicChainData, ChainFailure, ChainOptions, DataAccessor, LinkFunctor, ResponseType } from './types';
+
+type AdditionalOptions<TTriggerData> = { zodSchema?: ZodType<TTriggerData> };
 
 export class BasicTriggerChain<TTriggerData = unknown, TResponseType extends ResponseType = 'none'> extends FunctionChain<
   BasicChainData<TTriggerData>,
   TResponseType
 > {
-  constructor(options: ChainOptions<TResponseType>) {
+  constructor(protected readonly options: ChainOptions<TResponseType> & AdditionalOptions<TTriggerData>) {
     super(options);
   }
 
@@ -19,7 +21,12 @@ export class BasicTriggerChain<TTriggerData = unknown, TResponseType extends Res
     return new ParsedDataChain<TTriggerData, TData, TResponseType>(this.options, this, accessor, zodSchema);
   }
 
-  protected prepareChain(triggerData: TTriggerData, context: InvocationContext): BasicChainData<TTriggerData> {
+  protected prepareChain(triggerData: TTriggerData, context: InvocationContext): BasicChainData<TTriggerData> | ChainFailure {
+    if (this.options.zodSchema) {
+      const result = this.options.zodSchema.safeParse(triggerData);
+      if (!result.success) return { result: { status: 400, body: 'Invalid trigger data' }, linkIndex: -1, linkType: 'validation' };
+    }
+
     return { triggerData, context };
   }
 }

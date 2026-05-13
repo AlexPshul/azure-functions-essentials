@@ -1,4 +1,5 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
+import { z } from 'zod';
 import { BasicTriggerChain, funcResult, guard, inputFactory } from '../../src';
 
 describe('BasicTriggerChain', () => {
@@ -153,6 +154,83 @@ describe('BasicTriggerChain', () => {
       expect(handlerFn).not.toHaveBeenCalled();
       expect(mockContext.error).toHaveBeenCalled();
       expect(result).toEqual(funcResult('InternalServerError', 'There is no spoon'));
+    });
+  });
+
+  describe('zodSchema validation', () => {
+    const schema = z.object({ name: z.string(), age: z.number().min(18) });
+
+    it('should pass validation and call handler with valid data', async () => {
+      const triggerData = { name: 'Test', age: 30 };
+      const handlerFn = jest.fn().mockReturnValue({ ok: true });
+
+      const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json', zodSchema: schema });
+      const handler = chain.handle(handlerFn);
+      const result = await handler(triggerData, mockContext);
+
+      expect(handlerFn).toHaveBeenCalledWith({ triggerData, context: mockContext });
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('should return ChainFailure with linkType validation when data is invalid', async () => {
+      const triggerData = { name: 'Test', age: 15 };
+      const handlerFn = jest.fn();
+
+      const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json', zodSchema: schema });
+      const handler = chain.handle(handlerFn);
+      const result = await handler(triggerData, mockContext);
+
+      expect(handlerFn).not.toHaveBeenCalled();
+      expect(result).toHaveProperty('linkType', 'validation');
+      expect(result).toHaveProperty('linkIndex', -1);
+    });
+
+    it('should validate before guards run', async () => {
+      const triggerData = { name: 'Test', age: 15 };
+      const guardCheck = jest.fn().mockReturnValue(true);
+      const handlerFn = jest.fn();
+
+      const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json', zodSchema: schema }).useGuard(guard(guardCheck));
+      const handler = chain.handle(handlerFn);
+      await handler(triggerData, mockContext);
+
+      expect(guardCheck).not.toHaveBeenCalled();
+      expect(handlerFn).not.toHaveBeenCalled();
+    });
+
+    it('should throw Error on validation failure when responseType is none', async () => {
+      const triggerData = { name: 'Test', age: 15 };
+      const handlerFn = jest.fn();
+
+      const chain = new BasicTriggerChain<typeof triggerData>({ responseType: 'none', zodSchema: schema });
+      const handler = chain.handle(handlerFn);
+
+      await expect(handler(triggerData, mockContext)).rejects.toThrow();
+      expect(handlerFn).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 on validation failure when responseType is http', async () => {
+      const triggerData = { name: 'Test', age: 15 };
+      const handlerFn = jest.fn();
+
+      const chain = new BasicTriggerChain<typeof triggerData, 'http'>({ responseType: 'http', zodSchema: schema });
+      const handler = chain.handle(handlerFn);
+      const result = await handler(triggerData, mockContext);
+
+      expect(handlerFn).not.toHaveBeenCalled();
+      expect((result as { status: number }).status).toBe(400);
+    });
+
+    it('should skip validation when no zodSchema is provided', async () => {
+      const triggerData = { name: 'Test', age: 15 };
+      const handlerFn = jest.fn().mockReturnValue({ ok: true });
+
+      const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' });
+      const handler = chain.handle(handlerFn);
+      const result = await handler(triggerData, mockContext);
+
+      expect(handlerFn).toHaveBeenCalled();
+      expect(result).toEqual({ ok: true });
     });
   });
 });
