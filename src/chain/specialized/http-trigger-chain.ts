@@ -2,7 +2,7 @@ import { HttpRequest, InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { FunctionChain } from '../function-chain';
 import { ParsedDataChain } from '../parsed-data-chain';
-import { BasicChainData, LinkFunctor } from '../types';
+import { BasicChainData, DataAccessor, LinkFunctor } from '../types';
 
 export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>, 'http'> {
   constructor() {
@@ -19,11 +19,9 @@ export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>,
    * @returns A ParsedDataChain with the parsed body available as `parsedData`
    */
   public parseBody<TBody>(zodType?: ZodType<TBody>): ParsedDataChain<HttpRequest, TBody, 'http'>;
-  public parseBody<TBody>(
-    zodType?: LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>,
-  ): ParsedDataChain<HttpRequest, TBody, 'http'>;
+  public parseBody<TBody>(zodType?: LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>): ParsedDataChain<HttpRequest, TBody, 'http'>;
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
-    const accessor = async (chainData: BasicChainData<HttpRequest>) => (await chainData.triggerData.json()) as TBody;
+    const accessor: DataAccessor<HttpRequest, TBody> = async ({ triggerData }) => (await triggerData.json()) as TBody;
     return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, accessor, zodType);
   }
 

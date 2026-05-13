@@ -1,16 +1,16 @@
 import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
-import { defaultErrors, FunctionChain, isChainFailure } from './function-chain';
+import { defaultErrors, FunctionChain } from './function-chain';
+import { isChainFailure } from './helpers';
 import { BasicChainData, ChainFailure, ChainOptions, DataAccessor, LinkFunctor, ResponseType } from './types';
 
 type ParsedChainData<TTriggerData = unknown, TData = unknown> = BasicChainData<TTriggerData> & { parsedData: TData };
 
-export class ParsedDataChain<
-  TTriggerData,
-  TData,
-  TResponseType extends ResponseType,
-> extends FunctionChain<ParsedChainData<TTriggerData, TData>, TResponseType> {
+export class ParsedDataChain<TTriggerData, TData, TResponseType extends ResponseType> extends FunctionChain<
+  ParsedChainData<TTriggerData, TData>,
+  TResponseType
+> {
   constructor(
     options: ChainOptions<TResponseType>,
     private readonly sourceChain: FunctionChain<BasicChainData<TTriggerData>, TResponseType>,
@@ -55,9 +55,7 @@ export class ParsedDataChain<
       return { ...sourceResult, parsedData };
     } catch (error) {
       const linkError = defaultErrors.dataAccessor;
-      context.error(
-        `Link #${accessorIndex} (dataAccessor) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`,
-      );
+      context.error(`Link #${accessorIndex} (dataAccessor) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`);
       return { result: linkError, linkIndex: accessorIndex, linkType: 'dataAccessor' };
     }
   }

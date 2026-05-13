@@ -1,6 +1,7 @@
 import { HttpResponseInit, InvocationContext } from '@azure/functions';
-import { funcResult } from '../helpers';
+import { funcResult, Promisable } from '../helpers';
 import { anyGuard, guard as guardFactory } from './guards';
+import { isChainFailure } from './helpers';
 import {
   BasicChainData,
   ChainFailure,
@@ -15,7 +16,7 @@ import {
   ResponseType,
 } from './types';
 
-const defaultErrors: Record<ChainLink<BasicChainData>['type'] | 'dataAccessor', HttpResponseInit> = {
+export const defaultErrors: Record<ChainLink<BasicChainData>['type'] | 'dataAccessor', HttpResponseInit> = {
   guard: funcResult('Forbidden', "I'm sorry, kiddo. I really am."),
   inputBinding: funcResult('InternalServerError', 'There is no spoon'),
   dataAccessor: funcResult('BadRequest', 'Data access failed'),
@@ -25,14 +26,7 @@ const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(
   guards: Guard<TChainData['triggerData']>[] | [LinkFunctor<TChainData, Guard<TChainData['triggerData']>[]>],
 ): guards is Guard<TChainData['triggerData']>[] => typeof guards[0] !== 'function';
 
-export const isChainFailure = (result: BasicChainData | ChainFailure): result is ChainFailure => !('triggerData' in result);
-
-export { defaultErrors };
-
-export abstract class FunctionChain<
-  TChainData extends BasicChainData = BasicChainData,
-  TResponseType extends ResponseType = 'none',
-> {
+export abstract class FunctionChain<TChainData extends BasicChainData = BasicChainData, TResponseType extends ResponseType = 'none'> {
   protected chainLinks: ChainLink<TChainData>[] = [];
 
   constructor(protected readonly options: ChainOptions<TResponseType>) {}
@@ -85,33 +79,7 @@ export abstract class FunctionChain<
     return this;
   }
 
-  public handle<TResultBody = undefined>(
-    handler: ChainHandlerFor<TResponseType, TChainData, TResultBody>,
-  ): ChainWrapper<TChainData['triggerData'], TResponseType, TResultBody> {
-    return (async (triggerData: TChainData['triggerData'], context: InvocationContext) => {
-      const chainResult = await this.executeChain(triggerData, context);
-
-      if (isChainFailure(chainResult)) return this.handleFailure(chainResult);
-
-      const result = await handler(chainResult);
-      return this.handleResult(result);
-    }) as ChainWrapper<TChainData['triggerData'], TResponseType, TResultBody>;
-  }
-
-  public async executeChain(
-    triggerData: TChainData['triggerData'],
-    context: InvocationContext,
-  ): Promise<TChainData | ChainFailure> {
-    const chainData = await this.prepareChain(triggerData, context);
-    if (isChainFailure(chainData)) return chainData;
-
-    return this.executeLinks(chainData);
-  }
-
-  protected abstract prepareChain(
-    triggerData: TChainData['triggerData'],
-    context: InvocationContext,
-  ): Promise<TChainData | ChainFailure> | TChainData;
+  protected abstract prepareChain(triggerData: TChainData['triggerData'], context: InvocationContext): Promisable<TChainData | ChainFailure>;
 
   protected async executeLinks(chainData: TChainData): Promise<TChainData | ChainFailure> {
     const { context } = chainData;
@@ -169,5 +137,25 @@ export abstract class FunctionChain<
       case 'none':
         return undefined;
     }
+  }
+
+  protected async executeChain(triggerData: TChainData['triggerData'], context: InvocationContext): Promise<TChainData | ChainFailure> {
+    const chainData = await this.prepareChain(triggerData, context);
+    if (isChainFailure(chainData)) return chainData;
+
+    return this.executeLinks(chainData);
+  }
+
+  public handle<TResultBody = undefined>(
+    handler: ChainHandlerFor<TResponseType, TChainData, TResultBody>,
+  ): ChainWrapper<TChainData['triggerData'], TResponseType, TResultBody> {
+    return (async (triggerData: TChainData['triggerData'], context: InvocationContext) => {
+      const chainResult = await this.executeChain(triggerData, context);
+
+      if (isChainFailure(chainResult)) return this.handleFailure(chainResult);
+
+      const result = await handler(chainResult);
+      return this.handleResult(result);
+    }) as ChainWrapper<TChainData['triggerData'], TResponseType, TResultBody>;
   }
 }
