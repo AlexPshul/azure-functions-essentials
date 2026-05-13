@@ -4,6 +4,11 @@ import { FunctionChain } from '../function-chain';
 import { ParsedDataChain } from '../parsed-data-chain';
 import { BasicChainData, DataAccessor, LinkFunctor } from '../types';
 
+const jsonAccessor =
+  <TBody>(): DataAccessor<HttpRequest, TBody> =>
+  async ({ triggerData }) =>
+    (await triggerData.json()) as TBody;
+
 export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>, 'http'> {
   constructor() {
     super({ responseType: 'http' });
@@ -18,11 +23,11 @@ export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>,
    * @param zodType - The Zod schema or a function returning one, to validate the body object. (Optional)
    * @returns A ParsedDataChain with the parsed body available as `parsedData`
    */
+  public parseBody<TBody>(): ParsedDataChain<HttpRequest, TBody, 'http'>;
   public parseBody<TBody>(zodType?: ZodType<TBody>): ParsedDataChain<HttpRequest, TBody, 'http'>;
   public parseBody<TBody>(zodType?: LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>): ParsedDataChain<HttpRequest, TBody, 'http'>;
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
-    const accessor: DataAccessor<HttpRequest, TBody> = async ({ triggerData }) => (await triggerData.json()) as TBody;
-    return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, accessor, zodType);
+    return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, jsonAccessor<TBody>(), zodType);
   }
 
   protected prepareChain(triggerData: HttpRequest, context: InvocationContext): BasicChainData<HttpRequest> {
