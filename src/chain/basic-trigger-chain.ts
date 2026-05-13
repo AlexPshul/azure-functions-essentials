@@ -1,5 +1,6 @@
 import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
+import { funcResult } from '../helpers';
 import { FunctionChain } from './function-chain';
 import { ParsedDataChain } from './parsed-data-chain';
 import { BasicChainData, ChainFailure, ChainOptions, DataAccessor, LinkFunctor, ResponseType } from './types';
@@ -24,7 +25,7 @@ export class BasicTriggerChain<TTriggerData = unknown, TResponseType extends Res
   protected prepareChain(triggerData: TTriggerData, context: InvocationContext): BasicChainData<TTriggerData> | ChainFailure {
     if (this.options.zodSchema) {
       const result = this.options.zodSchema.safeParse(triggerData);
-      if (!result.success) return { result: { status: 400, body: 'Invalid trigger data' }, linkIndex: -1, linkType: 'validation' };
+      if (!result.success) return { result: funcResult('BadRequest', result.error.issues), linkIndex: -1, linkType: 'validation' };
     }
 
     return { triggerData, context };
