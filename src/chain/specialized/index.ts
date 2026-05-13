@@ -1,1 +1,1 @@
-export * from './http-chain';
+export * from './http-trigger-chain';

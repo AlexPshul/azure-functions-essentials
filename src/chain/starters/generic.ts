@@ -1,16 +1,16 @@
-import { FunctionChain } from '../function-chain';
+import { BasicTriggerChain } from '../basic-trigger-chain';
 import { ResponseType } from '../types';
 
 /**
  * Initializes a fully generic chain for any trigger type.
  * Use the specific factory functions (`startHttpChain`, `startMessageChain`, etc.) when possible.
  * @param options - Optional chain options. `responseType` defaults to `'none'`.
- * @returns A `FunctionChain<T, TResponseType>`
+ * @returns A `BasicTriggerChain<T, TResponseType>`
  */
-export function startGenericChain<T>(): FunctionChain<T>;
-export function startGenericChain<T>(options: { responseType: 'http' }): FunctionChain<T, 'http'>;
-export function startGenericChain<T>(options: { responseType: 'json' }): FunctionChain<T, 'json'>;
-export function startGenericChain<T>(options: { responseType: 'none' }): FunctionChain<T>;
-export function startGenericChain<T>(options?: { responseType?: ResponseType }): FunctionChain<T, ResponseType> {
-  return new FunctionChain<T, ResponseType>({ responseType: options?.responseType ?? 'none' });
+export function startGenericChain<T>(): BasicTriggerChain<T>;
+export function startGenericChain<T>(options: { responseType: 'http' }): BasicTriggerChain<T, 'http'>;
+export function startGenericChain<T>(options: { responseType: 'json' }): BasicTriggerChain<T, 'json'>;
+export function startGenericChain<T>(options: { responseType: 'none' }): BasicTriggerChain<T>;
+export function startGenericChain<T>(options?: { responseType?: ResponseType }): BasicTriggerChain<T, ResponseType> {
+  return new BasicTriggerChain<T, ResponseType>({ responseType: options?.responseType ?? 'none' });
 }

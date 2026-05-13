@@ -24,7 +24,7 @@ export type ChainLinkResult = Promisable<HttpResponseInit | boolean>;
 export type ChainFailure = {
   result: HttpResponseInit;
   linkIndex: number;
-  linkType: 'guard' | 'inputBinding' | 'transformer';
+  linkType: 'guard' | 'inputBinding' | 'dataAccessor';
 };
 
 type HttpChainHandler<TChainData extends BasicChainData, TBody> = (
