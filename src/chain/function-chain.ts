@@ -139,6 +139,14 @@ export abstract class FunctionChain<TChainData extends BasicChainData = BasicCha
     }
   }
 
+  protected static executeChainInstance<TChainData extends BasicChainData, TResponseType extends ResponseType>(
+    instance: FunctionChain<TChainData, TResponseType>,
+    triggerData: TChainData['triggerData'],
+    context: InvocationContext,
+  ) {
+    return instance.executeChain(triggerData, context);
+  }
+
   protected async executeChain(triggerData: TChainData['triggerData'], context: InvocationContext): Promise<TChainData | ChainFailure> {
     const chainData = await this.prepareChain(triggerData, context);
     if (isChainFailure(chainData)) return chainData;

@@ -32,7 +32,7 @@ export class ParsedDataChain<TTriggerData, TData, TResponseType extends Response
     triggerData: TTriggerData,
     context: InvocationContext,
   ): Promise<ParsedChainData<TTriggerData, TData> | ChainFailure> {
-    const sourceResult = await this.sourceChain.executeChain(triggerData, context);
+    const sourceResult = await FunctionChain.executeChainInstance(this.sourceChain, triggerData, context);
     if (isChainFailure(sourceResult)) return sourceResult;
 
     const accessorIndex = this.sourceChain.linkCount;
