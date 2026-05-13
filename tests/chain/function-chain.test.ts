@@ -1,7 +1,7 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
-import { FunctionChain, funcResult, guard, inputFactory, transformer, BasicChainData } from '../../src';
+import { BasicTriggerChain, funcResult, guard, inputFactory } from '../../src';
 
-describe('FunctionChain', () => {
+describe('BasicTriggerChain', () => {
   const mockTriggerData = {} as HttpRequest;
   let mockContext: InvocationContext;
 
@@ -14,7 +14,7 @@ describe('FunctionChain', () => {
   describe('useGuard', () => {
     it('should add a guard to the chain', () => {
       const testGuard = guard(() => true);
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' });
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' });
 
       const result = chain.useGuard(testGuard);
 
@@ -23,7 +23,7 @@ describe('FunctionChain', () => {
 
     it('should add a guard function to the chain', () => {
       const guardFn = jest.fn(() => guard(() => true));
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' });
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' });
 
       const result = chain.useGuard(guardFn);
 
@@ -35,7 +35,7 @@ describe('FunctionChain', () => {
     it('should add an input binding to the chain', () => {
       const testInput = inputFactory<string, string>('test', async data => data.toUpperCase());
       const binding = testInput.create('test-data');
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' });
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' });
 
       const result = chain.useInputBinding(binding);
 
@@ -45,7 +45,7 @@ describe('FunctionChain', () => {
     it('should add an input binding function to the chain', () => {
       const testInput = inputFactory<string, string>('test', async data => data.toUpperCase());
       const bindingFn = jest.fn(() => testInput.create('test-data'));
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' });
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' });
 
       const result = chain.useInputBinding(bindingFn);
 
@@ -60,7 +60,7 @@ describe('FunctionChain', () => {
       const binding = testInput.create('test-data');
       const handlerFn = jest.fn().mockReturnValue(funcResult('OK', 'Success'));
 
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuard(testGuard).useInputBinding(binding);
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuard(testGuard).useInputBinding(binding);
 
       const handler = chain.handle(handlerFn);
       const result = await handler(mockTriggerData, mockContext);
@@ -76,7 +76,7 @@ describe('FunctionChain', () => {
       const nonCallableGuardCheck = jest.fn().mockReturnValue(true);
       const handlerFn = jest.fn();
 
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' })
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' })
         .useGuard(guard(passingGuardCheck))
         .useGuard(guard(failingGuardCheck))
         .useGuard(guard(nonCallableGuardCheck));
@@ -95,7 +95,7 @@ describe('FunctionChain', () => {
       const customResponse = funcResult('Forbidden', 'Custom error message');
       const handlerFn = jest.fn();
 
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuard(guard(() => customResponse));
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuard(guard(() => customResponse));
 
       const handler = chain.handle(handlerFn);
       const result = await handler(mockTriggerData, mockContext);
@@ -109,7 +109,7 @@ describe('FunctionChain', () => {
       const failingGuardCheck = jest.fn().mockImplementation(() => false);
       const handlerFn = jest.fn().mockReturnValue(funcResult('OK'));
 
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuardIf(() => undefined, failingGuardCheck);
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuardIf(() => undefined, failingGuardCheck);
 
       const handler = chain.handle(handlerFn);
       const result = await handler(mockTriggerData, mockContext);
@@ -124,7 +124,7 @@ describe('FunctionChain', () => {
       const passingGuardCheck = jest.fn().mockImplementation((passedValue: string) => passedValue === valueToCheck);
       const handlerFn = jest.fn().mockReturnValue(funcResult('OK'));
 
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuardIf(
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuardIf(
         () => valueToCheck,
         ({ checkedValue }) => guard(() => passingGuardCheck(checkedValue)),
       );
@@ -145,7 +145,7 @@ describe('FunctionChain', () => {
       const failingBinding = testInput.create('test-data');
       const handlerFn = jest.fn();
 
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuard(passingGuard).useInputBinding(failingBinding);
+      const chain = new BasicTriggerChain<HttpRequest, 'http'>({ responseType: 'http' }).useGuard(passingGuard).useInputBinding(failingBinding);
 
       const handler = chain.handle(handlerFn);
       const result = await handler(mockTriggerData, mockContext);
@@ -153,147 +153,6 @@ describe('FunctionChain', () => {
       expect(handlerFn).not.toHaveBeenCalled();
       expect(mockContext.error).toHaveBeenCalled();
       expect(result).toEqual(funcResult('InternalServerError', 'There is no spoon'));
-    });
-  });
-
-  describe('useTransformer', () => {
-    it('should enrich chain data via transformer', async () => {
-      type HttpChainData = BasicChainData<HttpRequest>;
-      const enrichTransformer = transformer<HttpChainData, HttpChainData & { extra: string }>(chainData => ({
-        ...chainData,
-        extra: 'enriched',
-      }));
-      const handlerFn = jest.fn().mockReturnValue(funcResult('OK'));
-
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useTransformer(enrichTransformer);
-
-      const handler = chain.handle(handlerFn);
-      await handler(mockTriggerData, mockContext);
-
-      expect(handlerFn).toHaveBeenCalledWith(expect.objectContaining({ extra: 'enriched', triggerData: mockTriggerData, context: mockContext }));
-    });
-
-    it('should stop chain when transformer returns error', async () => {
-      type HttpChainData = BasicChainData<HttpRequest>;
-      const errorResponse = funcResult('BadRequest', 'Invalid data');
-      const failingTransformer = transformer<HttpChainData, HttpChainData>(() => ({ error: errorResponse }));
-      const handlerFn = jest.fn();
-
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useTransformer(failingTransformer);
-
-      const handler = chain.handle(handlerFn);
-      const result = await handler(mockTriggerData, mockContext);
-
-      expect(handlerFn).not.toHaveBeenCalled();
-      expect(result).toBe(errorResponse);
-      expect(mockContext.error).toHaveBeenCalled();
-    });
-
-    it('should stop chain when transformer throws', async () => {
-      type HttpChainData = BasicChainData<HttpRequest>;
-      const throwingTransformer = transformer<HttpChainData, HttpChainData>(() => {
-        throw new Error('Unexpected error');
-      });
-      const handlerFn = jest.fn();
-
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' }).useTransformer(throwingTransformer);
-
-      const handler = chain.handle(handlerFn);
-      const result = await handler(mockTriggerData, mockContext);
-
-      expect(handlerFn).not.toHaveBeenCalled();
-      expect(result).toEqual(funcResult('InternalServerError', 'Transformation failed'));
-      expect(mockContext.error).toHaveBeenCalled();
-    });
-
-    it('should pass enriched data to guards added after transformer', async () => {
-      type HttpChainData = BasicChainData<HttpRequest>;
-      const enrichTransformer = transformer<HttpChainData, HttpChainData & { parsedData: { role: string } }>(chainData => ({
-        ...chainData,
-        parsedData: { role: 'admin' },
-      }));
-      const guardCheck = jest.fn().mockReturnValue(true);
-      const handlerFn = jest.fn().mockReturnValue(funcResult('OK'));
-
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' })
-        .useTransformer(enrichTransformer)
-        .useGuard(({ parsedData }) => guard(() => guardCheck(parsedData)));
-
-      const handler = chain.handle(handlerFn);
-      await handler(mockTriggerData, mockContext);
-
-      expect(guardCheck).toHaveBeenCalledWith({ role: 'admin' });
-    });
-
-    it('should report correct global link indices across linked chains', async () => {
-      type HttpChainData = BasicChainData<HttpRequest>;
-      const enrichTransformer = transformer<HttpChainData, HttpChainData & { extra: string }>(chainData => ({
-        ...chainData,
-        extra: 'enriched',
-      }));
-      const handlerFn = jest.fn();
-
-      // Chain A: 2 guards (indices 0, 1)
-      // Transformer link (index 2)
-      // Chain B: 1 guard that fails (index 3)
-      const chain = new FunctionChain<HttpRequest, 'json'>({ responseType: 'json' })
-        .useGuard(guard(() => true))
-        .useGuard(guard(() => true))
-        .useTransformer(enrichTransformer)
-        .useGuard(guard(() => false));
-
-      const handler = chain.handle(handlerFn);
-      const result = await handler(mockTriggerData, mockContext);
-
-      expect(handlerFn).not.toHaveBeenCalled();
-      expect(result).toHaveProperty('linkIndex', 3);
-      expect(result).toHaveProperty('linkType', 'guard');
-    });
-
-    it('should report correct link index when previous chain guard fails', async () => {
-      type HttpChainData = BasicChainData<HttpRequest>;
-      const enrichTransformer = transformer<HttpChainData, HttpChainData & { extra: string }>(chainData => ({
-        ...chainData,
-        extra: 'enriched',
-      }));
-      const handlerFn = jest.fn();
-
-      // Chain A: guard pass (index 0), guard fail (index 1)
-      // Transformer never reached
-      const chain = new FunctionChain<HttpRequest, 'json'>({ responseType: 'json' })
-        .useGuard(guard(() => true))
-        .useGuard(guard(() => false))
-        .useTransformer(enrichTransformer);
-
-      const handler = chain.handle(handlerFn);
-      const result = await handler(mockTriggerData, mockContext);
-
-      expect(handlerFn).not.toHaveBeenCalled();
-      expect(result).toHaveProperty('linkIndex', 1);
-      expect(result).toHaveProperty('linkType', 'guard');
-    });
-
-    it('should execute previous chain guards before transformer', async () => {
-      type HttpChainData = BasicChainData<HttpRequest>;
-      const preGuardCheck = jest.fn().mockReturnValue(true);
-      const enrichTransformer = transformer<HttpChainData, HttpChainData & { extra: string }>(chainData => ({
-        ...chainData,
-        extra: 'enriched',
-      }));
-      const postGuardCheck = jest.fn().mockReturnValue(true);
-      const handlerFn = jest.fn().mockReturnValue(funcResult('OK'));
-
-      const chain = new FunctionChain<HttpRequest, 'http'>({ responseType: 'http' })
-        .useGuard(guard(preGuardCheck))
-        .useTransformer(enrichTransformer)
-        .useGuard(guard(postGuardCheck));
-
-      const handler = chain.handle(handlerFn);
-      await handler(mockTriggerData, mockContext);
-
-      expect(preGuardCheck).toHaveBeenCalled();
-      expect(postGuardCheck).toHaveBeenCalled();
-      expect(handlerFn).toHaveBeenCalled();
     });
   });
 });

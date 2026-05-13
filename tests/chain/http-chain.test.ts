@@ -1,8 +1,8 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { funcResult, guard, HttpChain, inputFactory } from '../../src';
+import { funcResult, guard, HttpTriggerChain, inputFactory } from '../../src';
 
-describe('HttpChain', () => {
+describe('HttpTriggerChain', () => {
   const mockRequest = {
     url: 'https://www.pshul.com',
     json: jest.fn(),
@@ -25,7 +25,7 @@ describe('HttpChain', () => {
       const binding = testInput.create('test-data');
       const handlerFn = jest.fn().mockResolvedValue(funcResult('OK', 'Success'));
 
-      const chain = new HttpChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
+      const chain = new HttpTriggerChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
 
       const handler = chain.handle(handlerFn);
       const result = await handler(mockRequest, mockContext);
@@ -41,7 +41,7 @@ describe('HttpChain', () => {
       const failingGuard = guard(() => customResponse);
       const handlerFn = jest.fn().mockResolvedValue(funcResult('OK', 'Success'));
 
-      const chain = new HttpChain().useGuard(failingGuard);
+      const chain = new HttpTriggerChain().useGuard(failingGuard);
 
       const handler = chain.handle(handlerFn);
       const result = await handler(mockRequest, mockContext);
@@ -55,7 +55,7 @@ describe('HttpChain', () => {
       const passingGuard = guard(() => true);
       const handlerFn = jest.fn().mockResolvedValue(undefined);
 
-      const chain = new HttpChain().useGuard(passingGuard);
+      const chain = new HttpTriggerChain().useGuard(passingGuard);
 
       const handler = chain.handle(handlerFn);
       const result = await handler(mockRequest, mockContext);
@@ -75,7 +75,7 @@ describe('HttpChain', () => {
       const binding = testInput.create('test-data');
       const handlerFn = jest.fn().mockImplementation(({ parsedData }) => funcResult('OK', parsedData));
 
-      const chain = new HttpChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
+      const chain = new HttpTriggerChain().useGuard(guard(passingGuardCheck)).useInputBinding(binding);
 
       const parsedChain = chain.parseBody();
       const handler = parsedChain.handle(handlerFn);
@@ -95,7 +95,7 @@ describe('HttpChain', () => {
       const schema = z.object({ name: z.string(), age: z.number().min(18) });
       const handlerFn = jest.fn().mockImplementation(({ parsedData }) => funcResult('OK', parsedData));
 
-      const chain = new HttpChain();
+      const chain = new HttpTriggerChain();
 
       const parsedChain = chain.parseBody(schema);
       const handler = parsedChain.handle(handlerFn);
@@ -112,7 +112,7 @@ describe('HttpChain', () => {
       const schema = z.object({ name: z.string(), age: z.number().min(18) });
       const handlerFn = jest.fn();
 
-      const chain = new HttpChain();
+      const chain = new HttpTriggerChain();
 
       const parsedChain = chain.parseBody(schema);
       const handler = parsedChain.handle(handlerFn);
@@ -130,7 +130,7 @@ describe('HttpChain', () => {
       const schemaFn = jest.fn(() => z.object({ name: z.string(), age: z.number().min(18) }));
       const handlerFn = jest.fn().mockImplementation(({ parsedData }) => funcResult('OK', parsedData));
 
-      const chain = new HttpChain();
+      const chain = new HttpTriggerChain();
 
       const parsedChain = chain.parseBody(schemaFn);
       const handler = parsedChain.handle(handlerFn);
@@ -145,7 +145,7 @@ describe('HttpChain', () => {
       (mockRequest.json as jest.Mock).mockRejectedValue(new SyntaxError('Unexpected token'));
       const handlerFn = jest.fn();
 
-      const chain = new HttpChain();
+      const chain = new HttpTriggerChain();
 
       const parsedChain = chain.parseBody();
       const handler = parsedChain.handle(handlerFn);

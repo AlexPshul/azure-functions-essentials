@@ -53,7 +53,7 @@ describe('startMcpChain', () => {
     const result = await handler(undefined as unknown, context);
 
     expect(result).toBeDefined();
-    expect(result).toHaveProperty('linkType', 'transformer');
+    expect(result).toHaveProperty('linkType', 'dataAccessor');
     expect(handlerFn).not.toHaveBeenCalled();
   });
 
@@ -101,9 +101,7 @@ describe('startMcpChain', () => {
     const guardCheck = jest.fn().mockReturnValue(true);
     const handlerFn = jest.fn().mockReturnValue({ ok: true });
 
-    const handler = startMcpChain<typeof args>()
-      .useGuard(guard(guardCheck))
-      .handle(handlerFn);
+    const handler = startMcpChain<typeof args>().useGuard(guard(guardCheck)).handle(handlerFn);
     await handler(undefined as unknown, context);
 
     expect(guardCheck).toHaveBeenCalled();

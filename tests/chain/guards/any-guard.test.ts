@@ -1,7 +1,7 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
-import { FunctionChain, funcResult, guard, ChainFailure } from '../../../src';
+import { BasicTriggerChain, funcResult, guard, ChainFailure } from '../../../src';
 
-describe('FunctionChain.useAnyGuard', () => {
+describe('BasicTriggerChain.useAnyGuard', () => {
   const mockTriggerData = {} as HttpRequest;
   let mockContext: InvocationContext;
 
@@ -11,8 +11,8 @@ describe('FunctionChain.useAnyGuard', () => {
     mockContext.error = jest.fn();
   });
 
-  const buildChain = () => new FunctionChain<HttpRequest, 'json'>({ responseType: 'json' });
-  const runChain = async (chain: FunctionChain<HttpRequest, 'json'>) => {
+  const buildChain = () => new BasicTriggerChain<HttpRequest, 'json'>({ responseType: 'json' });
+  const runChain = async (chain: BasicTriggerChain<HttpRequest, 'json'>) => {
     const handler = chain.handle(() => undefined);
     return handler(mockTriggerData, mockContext);
   };
