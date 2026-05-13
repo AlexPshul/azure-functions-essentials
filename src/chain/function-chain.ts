@@ -19,7 +19,7 @@ import {
 export const defaultErrors: Record<ChainLink<BasicChainData>['type'] | 'dataAccessor', HttpResponseInit> = {
   guard: funcResult('Forbidden', "I'm sorry, kiddo. I really am."),
   inputBinding: funcResult('InternalServerError', 'There is no spoon'),
-  dataAccessor: funcResult('BadRequest', 'Data access failed'),
+  dataAccessor: funcResult('BadRequest', 'Not like this. Not like this.'),
 };
 
 const isArrayOfGuards = <TChainData extends BasicChainData = BasicChainData>(

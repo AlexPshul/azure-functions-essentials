@@ -45,11 +45,14 @@ v2 makes the chain architecture generic for **all Azure Functions trigger types*
 |----|-----|-------|
 | `startChain()` | `startHttpChain()` | HTTP-specific chain with `parseBody()` |
 | `guard((req, ctx) => ...)` | `guard(({ triggerData, context }) => ...)` | Single-arg `chainData` object |
-| `.handle((req, ctx) => ...)` | `.handle((triggerData, context) => ...)` | Same for 2-arg handlers |
-| `.handle((req, body, ctx) => ...)` | `.handle((triggerData, parsedData, context) => ...)` | 3-arg handlers after `parseBody()` |
+| `.handle((req, ctx) => ...)` | `.handle(({ triggerData, context }) => ...)` | Single-arg `chainData` object |
+| `.handle((req, body, ctx) => ...)` | `.handle(({ triggerData, parsedData, context }) => ...)` | `chainData` with `parsedData` after `parseBody()` |
 | `ParsedBodyChain` | `ParsedDataChain` | Generic data parsing, not HTTP-only |
 | `{ request, context }` in chain data | `{ triggerData, context }` | Renamed for trigger-agnostic naming |
 | `{ body }` in parsed chain data | `{ parsedData }` | Renamed for clarity |
+| `HttpChain` | `HttpTriggerChain` | Clearer naming |
+| `RegularChain` | `BasicTriggerChain` | Clearer naming |
+| `BaseChain` | `FunctionChain` (abstract) | Not directly instantiated |
 
 ### Before (v1)
 
@@ -83,7 +86,7 @@ app.post('my-endpoint', {
     .useGuard(myGuard)
     .parseBody(mySchema)
     .useInputBinding(({ parsedData }) => myInput.create(parsedData.id))
-    .handle((triggerData, parsedData, context) => funcResult('OK', parsedData)),
+    .handle(({ triggerData, parsedData, context }) => funcResult('OK', parsedData)),
 });
 ```
 
@@ -124,8 +127,8 @@ app.post('super-secret-endpoint', {
     .useInputBinding(({ parsedData }) => userLookup.create(parsedData.user.id)) // Initialize the input
     .useGuard(({ context }) => ninjaGuard(userLookup.get(context))) // Use input results in the chain
     // Handle the request with all goodies available
-    .handle((triggerData, parsedData, ctx) => {
-      const user = userLookup.get(ctx); // Get the user from our input
+    .handle(({ triggerData, parsedData, context }) => {
+      const user = userLookup.get(context); // Get the user from our input
 
       // Your incredibly important business logic here
 
@@ -145,23 +148,23 @@ app.post('super-secret-endpoint', {
 import { startMessageChain, startTimerChain, startMcpChain } from 'azure-functions-essentials';
 import { z } from 'zod';
 
-// Service Bus with Zod validation — throws ZodError if invalid
+// Service Bus with Zod validation — throws if invalid
 const messageSchema = z.object({ orderId: z.string(), amount: z.number() });
 const messageHandler = startMessageChain(messageSchema)
-  .handle((triggerData, context) => {
+  .handle(({ triggerData, context }) => {
     // triggerData is typed as { orderId: string, amount: number }
     context.log(`Processing order ${triggerData.orderId}`);
   });
 
 // Timer trigger
 const timerHandler = startTimerChain()
-  .handle((triggerData, context) => {
+  .handle(({ triggerData, context }) => {
     context.log(`Timer fired: ${triggerData.isPastDue}`);
   });
 
 // MCP tool trigger with parsed arguments
 const mcpHandler = startMcpChain(myArgsSchema)
-  .handle((triggerData, parsedData, context) => {
+  .handle(({ parsedData, context }) => {
     return { result: 'Tool executed', data: parsedData };
   });
 ```
@@ -300,7 +303,7 @@ const apiKeyGuard = guard<HttpRequest>(({ triggerData, context }) => {
 // Usage in chain
 startHttpChain()
   .useGuard(apiKeyGuard)
-  .handle((triggerData, ctx) => {
+  .handle(({ triggerData, context }) => {
     // Only executed if API key is valid
     return funcResult('OK', 'Access granted!');
   });
@@ -320,7 +323,7 @@ const validateBody = (parsedData: BodyType) => guard(() => parsedData.age >= 18 
 startHttpChain()
   .parseBody<BodyType>()
   .useGuard(({ parsedData }) => validateBody(parsedData)) // Pass the parsed data to validateBody
-  .handle((triggerData, parsedData, ctx) => {
+  .handle(({ triggerData, parsedData, context }) => {
     // Only executed if the body validator is passed
     return funcResult('OK', `Welcome, ${parsedData.name}!`);
   });
@@ -346,7 +349,7 @@ const userSchema = z.object({
 
 startHttpChain()
   .parseBody(userSchema)
-  .handle((triggerData, parsedData, ctx) => {
+  .handle(({ triggerData, parsedData, context }) => {
     // parsedData is typed and validated!
   });
 ```

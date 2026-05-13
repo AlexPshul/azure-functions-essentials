@@ -31,7 +31,7 @@ A `'http' | 'json' | 'none'` discriminator on a chain that controls two behavior
 _Avoid_: ErrorMode, returnType
 
 **ChainFailure**:
-A structured object describing a guard, data accessor, or input-binding failure. Contains the HTTP result, link index, and link type. Returned as a value on `'json'` chains, used to construct the thrown `Error` message on `'none'` chains.
+A structured object describing a guard, data accessor, validation, or input-binding failure. Contains the HTTP result, link index, and link type. Returned as a value on `'json'` chains, used to construct the thrown `Error` message on `'none'` chains.
 
 **InputBinding**:
 A chain link that fetches and stores data in the invocation context before the handler runs.
@@ -39,7 +39,7 @@ A chain link that fetches and stores data in the invocation context before the h
 ### Chain Types
 
 **BasicTriggerChain**:
-A concrete chain for any trigger type. Extends `FunctionChain` and adds `parseData(accessor, zodSchema?)` to extract and optionally validate data from trigger data, returning a `ParsedDataChain`.
+A concrete chain for any trigger type. Extends `FunctionChain` and adds `parseData(accessor, zodSchema?)` to extract and optionally validate data from trigger data, returning a `ParsedDataChain`. Accepts an optional `zodSchema` in its constructor options for runtime validation of trigger data before guards run.
 
 **HttpTriggerChain**:
 A concrete chain for HTTP triggers. Extends `FunctionChain` and adds `parseBody(zodSchema?)` — a convenience that extracts the request body via `request.json()` and optionally validates it with Zod, returning a `ParsedDataChain`.
@@ -65,7 +65,7 @@ A chain that holds a reference to a source chain and a **DataAccessor**. Execute
 > **Domain expert:** "No — `headerGuard` returns a `Guard<HttpRequest>`, and a timer chain expects `Guard<Timer>`. TypeScript will catch that at compile time."
 
 > **Dev:** "What if I want to validate trigger data with Zod on a message chain?"
-> **Domain expert:** "Call `parseData(accessor, zodSchema)` — it extracts the data via the **DataAccessor** and validates it with Zod. If validation fails, the chain returns an error through `handleFailure()` just like a guard failure."
+> **Domain expert:** "Pass the Zod schema to `startMessageChain(zodSchema)` — it validates the trigger data before guards run. If validation fails, the chain returns an error through `handleFailure()` just like a guard failure. For extracting nested data (like HTTP body or MCP args), use `parseData(accessor, zodSchema)` instead."
 
 > **Dev:** "Why does the handler take a single `chainData` object instead of `(triggerData, context)`?"
 > **Domain expert:** "Because `parseData()` enriches the chain data with **ParsedData**. A single object lets the type widen naturally — after `parseBody()`, the handler sees `{ triggerData, context, parsedData }` without changing the handler arity."
