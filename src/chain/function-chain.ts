@@ -1,4 +1,4 @@
-import { HttpResponseInit } from '@azure/functions';
+import { HttpResponseInit, InvocationContext } from '@azure/functions';
 import { funcResult } from '../helpers';
 import { anyGuard, guard as guardFactory } from './guards';
 import {
@@ -85,19 +85,29 @@ export abstract class FunctionChain<
     return this;
   }
 
-  public abstract handle<TResultBody = undefined>(
+  public handle<TResultBody = undefined>(
     handler: ChainHandlerFor<TResponseType, TChainData, TResultBody>,
-  ): ChainWrapper<TChainData['triggerData'], TResponseType, TResultBody>;
+  ): ChainWrapper<TChainData['triggerData'], TResponseType, TResultBody> {
+    return (async (triggerData: TChainData['triggerData'], context: InvocationContext) => {
+      const chainResult = await this.executeChain({ triggerData, context });
 
-  public async executeChain(chainData: TChainData): Promise<TChainData | ChainFailure> {
-    const { context } = chainData;
+      if (isChainFailure(chainResult)) return this.handleFailure(chainResult);
+
+      const result = await handler(chainResult);
+      return this.handleResult(result);
+    }) as ChainWrapper<TChainData['triggerData'], TResponseType, TResultBody>;
+  }
+
+  public async executeChain(chainData: BasicChainData<TChainData['triggerData']>): Promise<TChainData | ChainFailure> {
+    const currentData = chainData as TChainData;
+    const { context } = currentData;
 
     for (const [index, link] of this.chainLinks.entries()) {
       const globalIndex = this.indexOffset + index;
       try {
         switch (link.type) {
           case 'guard': {
-            const linkResult: ChainLinkResult = await link.functor(chainData).check(chainData);
+            const linkResult: ChainLinkResult = await link.functor(currentData).check(currentData);
             if (linkResult !== true) {
               const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
               context.error(`Link #${globalIndex} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
@@ -106,7 +116,7 @@ export abstract class FunctionChain<
             break;
           }
           case 'inputBinding': {
-            const linkResult: ChainLinkResult = await link.functor(chainData).set(context);
+            const linkResult: ChainLinkResult = await link.functor(currentData).set(context);
             if (linkResult !== true) {
               const linkError = !linkResult ? defaultErrors[link.type] : linkResult;
               context.error(`Link #${globalIndex} (${link.type}) stopped the chain. Result: ${JSON.stringify(linkError)}`);
@@ -122,7 +132,7 @@ export abstract class FunctionChain<
       }
     }
 
-    return chainData;
+    return currentData;
   }
 
   protected handleFailure(failure: ChainFailure) {

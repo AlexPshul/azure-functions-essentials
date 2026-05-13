@@ -1,8 +1,8 @@
-import { HttpRequest, InvocationContext } from '@azure/functions';
+import { HttpRequest } from '@azure/functions';
 import { ZodType } from 'zod';
-import { FunctionChain, isChainFailure } from '../function-chain';
+import { FunctionChain } from '../function-chain';
 import { ParsedDataChain } from '../parsed-data-chain';
-import { BasicChainData, ChainHandlerFor, ChainWrapper, LinkFunctor } from '../types';
+import { BasicChainData, LinkFunctor } from '../types';
 
 export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>, 'http'> {
   constructor() {
@@ -25,18 +25,5 @@ export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>,
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
     const accessor = async (chainData: BasicChainData<HttpRequest>) => (await chainData.triggerData.json()) as TBody;
     return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, accessor, zodType);
-  }
-
-  public override handle<TResultBody = undefined>(
-    handler: ChainHandlerFor<'http', BasicChainData<HttpRequest>, TResultBody>,
-  ): ChainWrapper<HttpRequest, 'http', TResultBody> {
-    return (async (triggerData: HttpRequest, context: InvocationContext) => {
-      const chainResult = await this.executeChain({ triggerData, context });
-
-      if (isChainFailure(chainResult)) return this.handleFailure(chainResult);
-
-      const result = await handler(chainResult);
-      return this.handleResult(result);
-    }) as ChainWrapper<HttpRequest, 'http', TResultBody>;
   }
 }

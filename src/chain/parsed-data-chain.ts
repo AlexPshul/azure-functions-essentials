@@ -1,8 +1,7 @@
-import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
 import { defaultErrors, FunctionChain, isChainFailure } from './function-chain';
-import { BasicChainData, ChainFailure, ChainHandlerFor, ChainOptions, ChainWrapper, DataAccessor, LinkFunctor, ResponseType } from './types';
+import { BasicChainData, ChainFailure, ChainOptions, DataAccessor, LinkFunctor, ResponseType } from './types';
 
 type ParsedChainData<TTriggerData = unknown, TData = unknown> = BasicChainData<TTriggerData> & { parsedData: TData };
 
@@ -28,20 +27,9 @@ export class ParsedDataChain<
     return this.sourceChain.linkCount + 1;
   }
 
-  public override handle<TResultBody = undefined>(
-    handler: ChainHandlerFor<TResponseType, ParsedChainData<TTriggerData, TData>, TResultBody>,
-  ): ChainWrapper<TTriggerData, TResponseType, TResultBody> {
-    return (async (triggerData: TTriggerData, context: InvocationContext) => {
-      const chainResult = await this.runFullChain({ triggerData, context });
-
-      if (isChainFailure(chainResult)) return this.handleFailure(chainResult);
-
-      const result = await handler(chainResult);
-      return this.handleResult(result);
-    }) as ChainWrapper<TTriggerData, TResponseType, TResultBody>;
-  }
-
-  private async runFullChain(chainData: BasicChainData<TTriggerData>): Promise<ParsedChainData<TTriggerData, TData> | ChainFailure> {
+  public override async executeChain(
+    chainData: BasicChainData<TTriggerData>,
+  ): Promise<ParsedChainData<TTriggerData, TData> | ChainFailure> {
     const sourceResult = await this.sourceChain.executeChain(chainData);
     if (isChainFailure(sourceResult)) return sourceResult;
 
@@ -62,7 +50,7 @@ export class ParsedDataChain<
         parsedData = rawData;
       }
 
-      return super.executeChain({ ...sourceResult, parsedData });
+      return super.executeChain({ ...sourceResult, parsedData } as BasicChainData<TTriggerData>);
     } catch (error) {
       const linkError = defaultErrors.dataAccessor;
       chainData.context.error(
