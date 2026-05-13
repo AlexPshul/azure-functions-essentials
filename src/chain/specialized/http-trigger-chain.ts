@@ -19,33 +19,12 @@ export class HttpTriggerChain extends FunctionChain<BasicChainData<HttpRequest>,
    * @returns A ParsedDataChain with the parsed body available as `parsedData`
    */
   public parseBody<TBody>(zodType?: ZodType<TBody>): ParsedDataChain<HttpRequest, TBody, 'http'>;
-  /**
-   * Parses the body of the HTTP request using the request.json() call.
-   * After this call, the parsed body will be available in the chain data as `parsedData`.
-   *
-   * (!) DO NOT use request.json() if you use this method.
-   *
-   * @param zodType - A function that returns a Zod schema to use for validating the body object. (Optional)
-   * @returns A ParsedDataChain with the parsed body available as `parsedData`
-   */
   public parseBody<TBody>(
     zodType?: LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>,
   ): ParsedDataChain<HttpRequest, TBody, 'http'>;
   public parseBody<TBody>(zodType?: ZodType<TBody> | LinkFunctor<BasicChainData<HttpRequest>, ZodType<TBody>>) {
     const accessor = async (chainData: BasicChainData<HttpRequest>) => (await chainData.triggerData.json()) as TBody;
-    const zodSchema = zodType && typeof zodType === 'function' ? undefined : zodType;
-
-    if (zodType && typeof zodType === 'function') {
-      const zodFn = zodType;
-      const validatingAccessor = async (chainData: BasicChainData<HttpRequest>) => {
-        const rawData = (await chainData.triggerData.json()) as TBody;
-        const schema = zodFn(chainData);
-        return schema.parse(rawData);
-      };
-      return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, validatingAccessor);
-    }
-
-    return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, accessor, zodSchema);
+    return new ParsedDataChain<HttpRequest, TBody, 'http'>(this.options, this, accessor, zodType);
   }
 
   public override handle<TResultBody = undefined>(

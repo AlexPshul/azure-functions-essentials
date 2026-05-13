@@ -2,7 +2,7 @@ import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { FunctionChain, isChainFailure } from './function-chain';
 import { ParsedDataChain } from './parsed-data-chain';
-import { BasicChainData, ChainHandlerFor, ChainOptions, ChainWrapper, DataAccessor, ResponseType } from './types';
+import { BasicChainData, ChainHandlerFor, ChainOptions, ChainWrapper, DataAccessor, LinkFunctor, ResponseType } from './types';
 
 export class BasicTriggerChain<
   TTriggerData = unknown,
@@ -17,9 +17,12 @@ export class BasicTriggerChain<
   ): ParsedDataChain<TTriggerData, TData, TResponseType>;
   public parseData<TData>(
     accessor: DataAccessor<TTriggerData, TData>,
-    zodSchema: ZodType<TData>,
+    zodSchema: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>>,
   ): ParsedDataChain<TTriggerData, TData, TResponseType>;
-  public parseData<TData>(accessor: DataAccessor<TTriggerData, TData>, zodSchema?: ZodType<TData>) {
+  public parseData<TData>(
+    accessor: DataAccessor<TTriggerData, TData>,
+    zodSchema?: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>>,
+  ) {
     return new ParsedDataChain<TTriggerData, TData, TResponseType>(this.options, this, accessor, zodSchema);
   }
 

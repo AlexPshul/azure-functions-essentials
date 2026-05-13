@@ -2,7 +2,7 @@ import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
 import { defaultErrors, FunctionChain, isChainFailure } from './function-chain';
-import { BasicChainData, ChainFailure, ChainHandlerFor, ChainOptions, ChainWrapper, DataAccessor, ResponseType } from './types';
+import { BasicChainData, ChainFailure, ChainHandlerFor, ChainOptions, ChainWrapper, DataAccessor, LinkFunctor, ResponseType } from './types';
 
 type ParsedChainData<TTriggerData = unknown, TData = unknown> = BasicChainData<TTriggerData> & { parsedData: TData };
 
@@ -15,7 +15,7 @@ export class ParsedDataChain<
     options: ChainOptions<TResponseType>,
     private readonly sourceChain: FunctionChain<BasicChainData<TTriggerData>, TResponseType>,
     private readonly dataAccessor: DataAccessor<TTriggerData, TData>,
-    private readonly zodSchema?: ZodType<TData>,
+    private readonly zodSchema?: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>>,
   ) {
     super(options);
   }
@@ -51,7 +51,8 @@ export class ParsedDataChain<
 
       let parsedData: TData;
       if (this.zodSchema) {
-        const parseResult = this.zodSchema.safeParse(rawData);
+        const zodInstance = typeof this.zodSchema === 'function' ? this.zodSchema(sourceResult) : this.zodSchema;
+        const parseResult = zodInstance.safeParse(rawData);
         if (!parseResult.success) {
           chainData.context.error('Invalid data', parseResult.error.issues);
           return { result: funcResult('BadRequest', parseResult.error.issues), linkIndex: accessorIndex, linkType: 'dataAccessor' };
