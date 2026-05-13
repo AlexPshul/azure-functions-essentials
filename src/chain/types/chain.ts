@@ -24,21 +24,20 @@ export type ChainLinkResult = Promisable<HttpResponseInit | boolean>;
 export type ChainFailure = {
   result: HttpResponseInit;
   linkIndex: number;
-  linkType: 'guard' | 'inputBinding';
+  linkType: 'guard' | 'inputBinding' | 'dataAccessor' | 'validation';
 };
 
-type HttpChainHandler<TTriggerData, TBody> = (
-  triggerData: TTriggerData,
-  context: InvocationContext,
+type HttpChainHandler<TChainData extends BasicChainData, TBody> = (
+  chainData: TChainData,
 ) => FunctionResult<SpecificHttpResponseInit<TBody> | void | undefined>;
-type JsonChainHandler<TTriggerData, TResultBody> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<TResultBody>;
-type NoneChainHandler<TTriggerData> = (triggerData: TTriggerData, context: InvocationContext) => FunctionResult<void>;
+type JsonChainHandler<TChainData extends BasicChainData, TResultBody> = (chainData: TChainData) => FunctionResult<TResultBody>;
+type NoneChainHandler<TChainData extends BasicChainData> = (chainData: TChainData) => FunctionResult<void>;
 
-export type ChainHandlerFor<TResponseType extends ResponseType, TTriggerData, TResultBody> = TResponseType extends 'http'
-  ? HttpChainHandler<TTriggerData, TResultBody>
+export type ChainHandlerFor<TResponseType extends ResponseType, TChainData extends BasicChainData, TResultBody> = TResponseType extends 'http'
+  ? HttpChainHandler<TChainData, TResultBody>
   : TResponseType extends 'json'
-    ? JsonChainHandler<TTriggerData, TResultBody>
-    : NoneChainHandler<TTriggerData>;
+    ? JsonChainHandler<TChainData, TResultBody>
+    : NoneChainHandler<TChainData>;
 
 export type ChainResultFor<TResponseType extends ResponseType, TResultBody = undefined> = TResponseType extends 'http'
   ? HttpResponseInit

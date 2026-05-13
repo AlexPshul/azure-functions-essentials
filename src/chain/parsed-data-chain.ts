@@ -1,95 +1,62 @@
-import { FunctionResult, InvocationContext } from '@azure/functions';
+import { InvocationContext } from '@azure/functions';
 import { ZodType } from 'zod';
 import { funcResult } from '../helpers';
-import { BaseChain } from './base-chain';
-import { BasicChainData, ChainOptions, ChainWrapper, LinkFunctor, ResponseType, SpecificHttpResponseInit } from './types';
+import { defaultErrors, FunctionChain } from './function-chain';
+import { isChainFailure } from './helpers';
+import { BasicChainData, ChainFailure, ChainOptions, DataAccessor, LinkFunctor, ResponseType } from './types';
 
-type HttpParsedHandler<TTriggerData, TData, TResultBody> = (
-  triggerData: TTriggerData,
-  parsedData: TData,
-  context: InvocationContext,
-) => FunctionResult<SpecificHttpResponseInit<TResultBody> | void | undefined>;
+type ParsedChainData<TTriggerData = unknown, TData = unknown> = BasicChainData<TTriggerData> & { parsedData: TData };
 
-type JsonParsedHandler<TTriggerData, TData, TResultBody> = (
-  triggerData: TTriggerData,
-  parsedData: TData,
-  context: InvocationContext,
-) => FunctionResult<TResultBody>;
-
-type NoneParsedHandler<TTriggerData, TData> = (triggerData: TTriggerData, parsedData: TData, context: InvocationContext) => FunctionResult<void>;
-
-type ParsedHandlerFor<TResponseType extends ResponseType, TTriggerData, TData, TResultBody> = TResponseType extends 'http'
-  ? HttpParsedHandler<TTriggerData, TData, TResultBody>
-  : TResponseType extends 'json'
-    ? JsonParsedHandler<TTriggerData, TData, TResultBody>
-    : NoneParsedHandler<TTriggerData, TData>;
-
-type ParsedChainData<TTriggerData, TData> = BasicChainData<TTriggerData> & { parsedData: TData };
-
-/**
- * A chain that extracts parsed data from trigger data using a configurable data accessor.
- * The handler receives three arguments: (triggerData, parsedData, context).
- */
-export class ParsedDataChain<TTriggerData, TData, TResponseType extends ResponseType = 'http'> extends BaseChain<
+export class ParsedDataChain<TTriggerData, TData, TResponseType extends ResponseType> extends FunctionChain<
   ParsedChainData<TTriggerData, TData>,
   TResponseType
 > {
   constructor(
-    private readonly dataAccessor: (chainData: BasicChainData<TTriggerData>) => Promise<TData> | TData,
-    private readonly zodType: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>> | undefined,
     options: ChainOptions<TResponseType>,
+    private readonly sourceChain: FunctionChain<BasicChainData<TTriggerData>, TResponseType>,
+    private readonly dataAccessor: DataAccessor<TTriggerData, TData>,
+    private readonly zodSchema?: ZodType<TData> | LinkFunctor<BasicChainData<TTriggerData>, ZodType<TData>>,
   ) {
     super(options);
   }
 
-  /**
-   * Registers a handler for the Azure function handler chain.
-   * @param handler - The handler function to be executed after the chain is executed. Contains the trigger data, the parsed data, and the context.
-   * @returns A function that satisfies the Azure Functions handler interface.
-   */
-  public handle<TResultBody = undefined>(
-    handler: ParsedHandlerFor<TResponseType, TTriggerData, TData, TResultBody>,
-  ): ChainWrapper<TTriggerData, TResponseType, TResultBody> {
-    return (async (triggerData: TTriggerData, context: InvocationContext) => {
-      const basicChainData = { triggerData, context };
+  public override get linkCount(): number {
+    return this.chainLinks.length + this.sourceChain.linkCount + 1;
+  }
 
-      let rawData: TData;
-      try {
-        rawData = await this.dataAccessor(basicChainData);
-      } catch (error) {
-        if (this.options.responseType === 'http') {
-          context.error('Failed to parse data', error);
-          return funcResult('BadRequest', 'Failed to parse data');
-        }
-        throw error;
-      }
+  protected override get indexOffset(): number {
+    return this.sourceChain.linkCount + 1;
+  }
+
+  protected override async prepareChain(
+    triggerData: TTriggerData,
+    context: InvocationContext,
+  ): Promise<ParsedChainData<TTriggerData, TData> | ChainFailure> {
+    const sourceResult = await FunctionChain.executeChainInstance(this.sourceChain, triggerData, context);
+    if (isChainFailure(sourceResult)) return sourceResult;
+
+    const accessorIndex = this.sourceChain.linkCount;
+    try {
+      const rawData = await this.dataAccessor(sourceResult);
 
       let parsedData: TData;
-
-      if (!this.zodType) {
-        parsedData = rawData;
-      } else {
-        const zodInstance = typeof this.zodType === 'function' ? this.zodType(basicChainData) : this.zodType;
+      if (this.zodSchema) {
+        const zodInstance = typeof this.zodSchema === 'function' ? this.zodSchema(sourceResult) : this.zodSchema;
         const parseResult = zodInstance.safeParse(rawData);
         if (!parseResult.success) {
           context.error('Invalid data', parseResult.error.issues);
-          switch (this.options.responseType) {
-            case 'http':
-              return funcResult('BadRequest', parseResult.error.issues);
-            case 'json':
-              return parseResult.error;
-            default:
-              throw parseResult.error;
-          }
+          return { result: funcResult('BadRequest', parseResult.error.issues), linkIndex: accessorIndex, linkType: 'dataAccessor' };
         }
         parsedData = parseResult.data;
+      } else {
+        parsedData = rawData;
       }
 
-      const failure = await this.executeChain({ triggerData, context, parsedData });
-      if (failure) return this.handleFailure(failure);
-
-      const result = await handler(triggerData, parsedData, context);
-      return this.handleResult(result);
-    }) as ChainWrapper<TTriggerData, TResponseType, TResultBody>;
+      return { ...sourceResult, parsedData };
+    } catch (error) {
+      const linkError = defaultErrors.dataAccessor;
+      context.error(`Link #${accessorIndex} (dataAccessor) failed. Result: ${JSON.stringify(linkError)} | Error: ${JSON.stringify(error, null, 2)}`);
+      return { result: linkError, linkIndex: accessorIndex, linkType: 'dataAccessor' };
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { InvocationContext } from '@azure/functions';
-import { RegularChain, ChainFailure, guard, funcResult } from '../../src';
+import { BasicTriggerChain, ChainFailure, guard, funcResult } from '../../src';
 
-describe('RegularChain with responseType json', () => {
+describe('BasicTriggerChain with responseType json', () => {
   let mockContext: InvocationContext;
 
   beforeEach(() => {
@@ -14,11 +14,11 @@ describe('RegularChain with responseType json', () => {
     const triggerData = { message: 'hello' };
     const handlerFn = jest.fn().mockReturnValue({ result: 'success' });
 
-    const chain = new RegularChain<typeof triggerData, 'json'>({ responseType: 'json' });
+    const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' });
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
-    expect(handlerFn).toHaveBeenCalledWith(triggerData, mockContext);
+    expect(handlerFn).toHaveBeenCalledWith({ triggerData, context: mockContext });
     expect(result).toEqual({ result: 'success' });
   });
 
@@ -27,7 +27,7 @@ describe('RegularChain with responseType json', () => {
     const failingGuard = guard(() => false);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(failingGuard);
+    const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
@@ -42,7 +42,7 @@ describe('RegularChain with responseType json', () => {
     const failingGuard = guard(() => customResponse);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(failingGuard);
+    const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
@@ -54,7 +54,7 @@ describe('RegularChain with responseType json', () => {
     const triggerData = { message: 'hello' };
     const handlerFn = jest.fn().mockReturnValue('plain string result');
 
-    const chain = new RegularChain<typeof triggerData, 'json'>({ responseType: 'json' });
+    const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' });
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
@@ -65,7 +65,7 @@ describe('RegularChain with responseType json', () => {
     const triggerData = { message: 'hello' };
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'json'>({ responseType: 'json' });
+    const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' });
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 
@@ -77,7 +77,7 @@ describe('RegularChain with responseType json', () => {
     const guardCheck = jest.fn().mockReturnValue(true);
     const handlerFn = jest.fn().mockReturnValue({ ok: true });
 
-    const chain = new RegularChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(guard(guardCheck));
+    const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(guard(guardCheck));
     const handler = chain.handle(handlerFn);
     await handler(triggerData, mockContext);
 
@@ -90,7 +90,7 @@ describe('RegularChain with responseType json', () => {
     const failingGuard = guard(() => customResponse);
     const handlerFn = jest.fn();
 
-    const chain = new RegularChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(failingGuard);
+    const chain = new BasicTriggerChain<typeof triggerData, 'json'>({ responseType: 'json' }).useGuard(failingGuard);
     const handler = chain.handle(handlerFn);
     const result = await handler(triggerData, mockContext);
 

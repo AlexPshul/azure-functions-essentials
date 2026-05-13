@@ -1,8 +1,8 @@
 import { Timer } from '@azure/functions';
-import { RegularChain } from '../regular-chain';
+import { BasicTriggerChain } from '../basic-trigger-chain';
 
 /**
  * Initializes a new timer chain for Azure Functions timer triggers.
- * @returns A `RegularChain<Timer, 'none'>`
+ * @returns A `BasicTriggerChain<Timer>`
  */
-export const startTimerChain = () => new RegularChain<Timer>({ responseType: 'none' });
+export const startTimerChain = () => new BasicTriggerChain<Timer>({ responseType: 'none' });
